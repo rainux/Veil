@@ -4184,3 +4184,80 @@ This prevents NSDocument from setting "Untitled". The title will be updated when
 git add MacNeovim/Window/WindowDocument.swift
 git commit -m "Override displayName to prevent Untitled flash in title bar"
 ```
+
+---
+
+### Task 29: Fix Default Title and Title Timing
+
+**Files:**
+- Modify: `MacNeovim/Window/WindowDocument.swift`
+
+**Problem:** Default window title is empty (from Task 28's displayName override). Should be "MacNeovim". Also `set title` is sent immediately after `ui_attach`, before nvim finishes initial rendering.
+
+**Fix:**
+1. Change `displayName` override to return `"MacNeovim"` instead of `""`
+2. Move `set title` from `startNvim()` into the event loop — send it on the first `flush` event (which means nvim has completed initial rendering)
+
+- [ ] **Step 1: Read WindowDocument.swift**
+
+- [ ] **Step 2: Change displayName to return "MacNeovim"**
+
+```swift
+override var displayName: String! {
+    get { "MacNeovim" }
+    set { }
+}
+```
+
+- [ ] **Step 3: Move `set title` — remove from startNvim(), add to event loop on first flush**
+
+Add a `private var hasReceivedFirstFlush = false` flag. In the event loop's `.flush` case, check the flag and send `set title` once:
+
+```swift
+case .flush:
+    nvimView?.render(grid: grid)
+    grid.clearDirty()
+    if !hasReceivedFirstFlush {
+        hasReceivedFirstFlush = true
+        Task { try? await channel.command("set title") }
+    }
+```
+
+Remove the `try? await channel.command("set title")` line from `startNvim()`.
+
+- [ ] **Step 4: Build and verify**
+
+- [ ] **Step 5: Commit**
+
+```bash
+git add MacNeovim/Window/WindowDocument.swift
+git commit -m "Default title to MacNeovim, send set title after first flush"
+```
+
+---
+
+### Task 30: Fix Title Bar Height — Use Compact Toolbar Style
+
+**Files:**
+- Modify: `MacNeovim/Window/WindowController.swift`
+
+**Problem:** The empty NSToolbar (added for centering the title) makes the title bar much taller than normal.
+
+**Fix:** Set `window.toolbarStyle = .unifiedCompact` to merge the toolbar into the title bar without extra height.
+
+- [ ] **Step 1: Read WindowController.swift**
+
+- [ ] **Step 2: After creating the toolbar, add:**
+
+```swift
+window.toolbarStyle = .unifiedCompact
+```
+
+- [ ] **Step 3: Build and verify**
+
+- [ ] **Step 4: Commit**
+
+```bash
+git add MacNeovim/Window/WindowController.swift
+git commit -m "Use unifiedCompact toolbar style to fix title bar height"
+```
