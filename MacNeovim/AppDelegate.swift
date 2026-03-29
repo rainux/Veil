@@ -9,6 +9,22 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
     func applicationWillTerminate(_ aNotification: Notification) {}
 
+    func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
+        let documents = NSDocumentController.shared.documents.compactMap { $0 as? WindowDocument }
+        guard !documents.isEmpty else { return .terminateNow }
+        // Send :confirm qa to every open neovim instance; each will exit on its own if confirmed,
+        // causing the event stream to end and close() to be called. The app will quit naturally
+        // when all windows are closed (applicationShouldTerminateAfterLastWindowClosed handles that).
+        for doc in documents {
+            Task { @MainActor in
+                try? await doc.channel.command("confirm qa")
+            }
+        }
+        return .terminateCancel
+    }
+
+    func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool { true }
+
     func applicationSupportsSecureRestorableState(_ app: NSApplication) -> Bool { true }
 
     func applicationShouldOpenUntitledFile(_ sender: NSApplication) -> Bool { false }

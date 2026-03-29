@@ -81,11 +81,19 @@ class WindowDocument: NSDocument {
     }
 
     override func canClose(withDelegate delegate: Any, shouldClose shouldCloseSelector: Selector?, contextInfo: UnsafeMutableRawPointer?) {
-        Task {
-            try? await channel.command("qa!")
+        Task { @MainActor in
+            // Send :confirm qa — nvim will prompt inside the terminal if unsaved buffers exist
+            try? await channel.command("confirm qa")
+            // Don't allow NSDocument to close — the window closes when nvim exits
+            // (event stream ends → close() is called from the event loop)
         }
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-            super.canClose(withDelegate: delegate, shouldClose: shouldCloseSelector, contextInfo: contextInfo)
+        // Tell NSDocument NOT to close right now
+        if let selector = shouldCloseSelector {
+            let obj = delegate as AnyObject
+            typealias ShouldCloseFunc = @convention(c) (AnyObject, Selector, AnyObject, Bool, UnsafeMutableRawPointer?) -> Void
+            let imp = obj.method(for: selector)
+            let fn = unsafeBitCast(imp, to: ShouldCloseFunc.self)
+            fn(obj, selector, self, false, contextInfo)
         }
     }
 
