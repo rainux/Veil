@@ -3897,28 +3897,49 @@ git commit -m "Replace byte-by-byte pipe reading with chunk-based data streaming
 
 ---
 
-### Task 21: Persist and Restore Window Size
+### Task 21: Persist and Restore Window Size (REVISED)
 
 **Files:**
 - Modify: `MacNeovim/Window/WindowController.swift`
 
-**Problem:** Window size resets on every launch. New windows don't inherit the last used size.
+**Problem:** `setFrameAutosaveName` was tried but doesn't work — likely interferes with `isRestorable = false` or NSDocument flow.
 
-**Fix:** Use `window.setFrameAutosaveName("MacNeovimWindow")` after creating the window. macOS automatically saves/restores the window frame to UserDefaults. New windows also pick up the saved frame.
+**Fix:** Manual save/restore via UserDefaults.
+1. Remove the `setFrameAutosaveName` call (it was already added but doesn't work)
+2. In `windowDidResize(_:)` and a new `windowDidMove(_:)`, save the window frame to UserDefaults under key `"MacNeovimWindowFrame"`
+3. In the convenience init, after `window.center()`, check if a saved frame exists and apply it with `window.setFrame(savedFrame, display: false)`
+
+```swift
+// In convenience init, after window.center():
+if let frameString = UserDefaults.standard.string(forKey: "MacNeovimWindowFrame") {
+    window.setFrame(NSRectFromString(frameString), display: false)
+}
+
+// Add to NSWindowDelegate methods:
+func windowDidResize(_ notification: Notification) {
+    saveWindowFrame()
+    // ... existing resize handling
+}
+
+func windowDidMove(_ notification: Notification) {
+    saveWindowFrame()
+}
+
+private func saveWindowFrame() {
+    guard let frame = window?.frame else { return }
+    UserDefaults.standard.set(NSStringFromRect(frame), forKey: "MacNeovimWindowFrame")
+}
+```
 
 - [ ] **Step 1: Read WindowController.swift**
-
-- [ ] **Step 2: Add `window.setFrameAutosaveName("MacNeovimWindow")` in the convenience init, after `window.center()`**
-
-Note: `setFrameAutosaveName` must be called AFTER the window is created but before it's shown. If a saved frame exists, it overrides the initial contentRect and center() call automatically.
-
-- [ ] **Step 3: Build and verify**
-
-- [ ] **Step 4: Commit**
+- [ ] **Step 2: Remove `setFrameAutosaveName` call**
+- [ ] **Step 3: Add frame restore in init and save in windowDidResize/windowDidMove**
+- [ ] **Step 4: Build and verify**
+- [ ] **Step 5: Commit**
 
 ```bash
 git add MacNeovim/Window/WindowController.swift
-git commit -m "Persist and restore window size across launches"
+git commit -m "Persist window size via manual UserDefaults save/restore"
 ```
 
 ---
