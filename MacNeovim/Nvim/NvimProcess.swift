@@ -39,7 +39,7 @@ final class NvimProcess: @unchecked Sendable {
         process.qualityOfService = .userInteractive
         let binary = resolveNvimBinary()
         process.executableURL = URL(fileURLWithPath: binary)
-        var env = Self.loginShellEnvironment()
+        var env = ProcessInfo.processInfo.environment
         env["NVIM_APPNAME"] = appName
         env.merge(additionalEnv) { _, new in new }
         process.environment = env
@@ -86,41 +86,4 @@ final class NvimProcess: @unchecked Sendable {
         return nil
     }
 
-    // MARK: - Login shell environment
-
-    static func loginShellEnvironment() -> [String: String] {
-        let shellPath = ProcessInfo.processInfo.environment["SHELL"] ?? "/bin/zsh"
-        let shellName = URL(fileURLWithPath: shellPath).lastPathComponent
-        let process = Process()
-        process.executableURL = URL(fileURLWithPath: shellPath)
-        var args = ["-l"]
-        if shellName != "tcsh" { args.append("-i") }
-        let marker = UUID().uuidString
-        args.append(contentsOf: ["-c", "echo \(marker) && env"])
-        process.arguments = args
-        let pipe = Pipe()
-        process.standardOutput = pipe
-        process.standardError = FileHandle.nullDevice
-        process.currentDirectoryURL = URL(fileURLWithPath: NSHomeDirectory())
-        do {
-            try process.run()
-            process.waitUntilExit()
-        } catch {
-            return ProcessInfo.processInfo.environment
-        }
-        let data = pipe.fileHandleForReading.readDataToEndOfFile()
-        guard let output = String(data: data, encoding: .utf8) else {
-            return ProcessInfo.processInfo.environment
-        }
-        guard let markerRange = output.range(of: marker) else {
-            return ProcessInfo.processInfo.environment
-        }
-        let envString = output[markerRange.upperBound...].trimmingCharacters(in: .whitespacesAndNewlines)
-        var env: [String: String] = [:]
-        for line in envString.split(separator: "\n") {
-            let parts = line.split(separator: "=", maxSplits: 1)
-            if parts.count == 2 { env[String(parts[0])] = String(parts[1]) }
-        }
-        return env.isEmpty ? ProcessInfo.processInfo.environment : env
-    }
 }
