@@ -27,29 +27,25 @@ actor MsgpackRpc {
     }
 
     func start() async {
-        let stream = outPipe.asyncBytes
         var accumulated = Data()
-        do {
-            for try await byte in stream {
-                accumulated.append(byte)
-                do {
-                    let messages = try Self.decodeAccumulated(data: &accumulated)
-                    for message in messages {
-                        switch message {
-                        case .response(let msgid, let error, let result):
-                            if let continuation = pendingRequests.removeValue(forKey: msgid) {
-                                continuation.resume(returning: (error, result))
-                            }
-                        case .notification, .request:
-                            eventContinuation?.yield(message)
-                        }
+        for await chunk in outPipe.asyncDataChunks {
+            accumulated.append(chunk)
+            let messages: [RpcMessage]
+            do {
+                messages = try Self.decodeAccumulated(data: &accumulated)
+            } catch {
+                continue
+            }
+            for message in messages {
+                switch message {
+                case .response(let msgid, let error, let result):
+                    if let continuation = pendingRequests.removeValue(forKey: msgid) {
+                        continuation.resume(returning: (error, result))
                     }
-                } catch {
-                    // Incomplete data — continue accumulating
+                case .notification, .request:
+                    eventContinuation?.yield(message)
                 }
             }
-        } catch {
-            // Stream ended (pipe closed)
         }
         eventContinuation?.finish()
         for (_, continuation) in pendingRequests {
@@ -133,17 +129,15 @@ extension MessagePackValue {
 }
 
 extension FileHandle {
-    nonisolated var asyncBytes: AsyncThrowingStream<UInt8, Error> {
-        AsyncThrowingStream { continuation in
+    nonisolated var asyncDataChunks: AsyncStream<Data> {
+        AsyncStream { continuation in
             self.readabilityHandler = { handle in
                 let data = handle.availableData
                 if data.isEmpty {
                     continuation.finish()
                     return
                 }
-                for byte in data {
-                    continuation.yield(byte)
-                }
+                continuation.yield(data)
             }
         }
     }
