@@ -3816,3 +3816,81 @@ Run: `xcodebuild test -project MacNeovim.xcodeproj -scheme MacNeovim -destinatio
 git add MacNeovim/Rendering/GlyphCache.swift MacNeovim/Rendering/RowRenderer.swift MacNeovim/Rendering/NvimView.swift
 git commit -m "Fix Retina rendering at 2x scale and handle double-width CJK characters"
 ```
+
+---
+
+### Task 20: Fix Extremely Slow I/O — Byte-by-Byte Pipe Reading
+
+**Files:**
+- Modify: `MacNeovim/Nvim/MsgpackRpc.swift`
+
+**Problem:** `MsgpackRpc.start()` reads from the nvim stdout pipe one byte at a time via `for try await byte in stream`. The `asyncBytes` extension yields each byte individually through an `AsyncThrowingStream`, causing one async/await context switch per byte. A single nvim redraw response can be tens of KB, meaning tens of thousands of context switches. This causes both slow startup and sluggish input response.
+
+**Fix:** Replace the byte-by-byte `AsyncThrowingStream<UInt8>` with a chunk-based `AsyncStream<Data>`. The `readabilityHandler` already receives all available data at once — yield the entire `Data` chunk instead of iterating its bytes.
+
+- [ ] **Step 1: Read MsgpackRpc.swift**
+
+- [ ] **Step 2: Replace the `FileHandle.asyncBytes` extension with a chunk-based `asyncDataChunks`**
+
+```swift
+extension FileHandle {
+    nonisolated var asyncDataChunks: AsyncStream<Data> {
+        AsyncStream { continuation in
+            self.readabilityHandler = { handle in
+                let data = handle.availableData
+                if data.isEmpty {
+                    continuation.finish()
+                    return
+                }
+                continuation.yield(data)
+            }
+        }
+    }
+}
+```
+
+- [ ] **Step 3: Rewrite `start()` to consume data chunks**
+
+```swift
+func start() async {
+    var accumulated = Data()
+    for await chunk in outPipe.asyncDataChunks {
+        accumulated.append(chunk)
+        // Try to decode complete messages from accumulated data
+        let messages: [RpcMessage]
+        do {
+            messages = try Self.decodeAccumulated(data: &accumulated)
+        } catch {
+            continue
+        }
+        for message in messages {
+            switch message {
+            case .response(let msgid, let error, let result):
+                if let continuation = pendingRequests.removeValue(forKey: msgid) {
+                    continuation.resume(returning: (error, result))
+                }
+            case .notification, .request:
+                eventContinuation?.yield(message)
+            }
+        }
+    }
+    eventContinuation?.finish()
+    for (_, continuation) in pendingRequests {
+        continuation.resume(returning: (error: .string("channel closed"), result: .nil))
+    }
+    pendingRequests.removeAll()
+}
+```
+
+- [ ] **Step 4: Remove the old `asyncBytes` extension** (the `AsyncThrowingStream<UInt8>` one)
+
+- [ ] **Step 5: Build and run tests**
+
+Run: `xcodebuild test -project MacNeovim.xcodeproj -scheme MacNeovim -destination 'platform=macOS' -only-testing:MacNeovimTests 2>&1 | grep -E 'passed|failed|Executed'`
+
+- [ ] **Step 6: Commit**
+
+```bash
+git add MacNeovim/Nvim/MsgpackRpc.swift
+git commit -m "Replace byte-by-byte pipe reading with chunk-based data streaming"
+```
