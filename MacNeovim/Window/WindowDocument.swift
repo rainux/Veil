@@ -21,6 +21,11 @@ class WindowDocument: NSDocument {
         self.channel = NvimChannel()
     }
 
+    override var displayName: String! {
+        get { "" }
+        set { }
+    }
+
     override func makeWindowControllers() {
         let controller = WindowController()
         controller.nvimView.channel = channel
