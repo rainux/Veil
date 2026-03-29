@@ -24,12 +24,6 @@ class WindowDocument: NSDocument {
     override func makeWindowControllers() {
         let controller = WindowController()
         controller.nvimView.channel = channel
-        controller.tablineView.onSelectTab = { [weak self] index in
-            guard let self else { return }
-            Task {
-                try? await self.channel.command("tabnext \(index + 1)")
-            }
-        }
         addWindowController(controller)
         Task { await startNvim() }
     }
@@ -68,8 +62,6 @@ class WindowDocument: NSDocument {
                     nvimView?.updateModeInfo(modes)
                 case .modeChange(_, let index):
                     nvimView?.updateCursorMode(index)
-                case .tablineUpdate(let current, let tabs):
-                    windowController?.tablineView.update(current: current, tabInfos: tabs)
                 case .bell:
                     NSSound.beep()
                 case .optionSet(let name, let value):

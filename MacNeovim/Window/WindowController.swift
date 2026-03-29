@@ -19,26 +19,7 @@ class WindowController: NSWindowController, NSWindowDelegate {
         self.init(window: window)
         window.delegate = self
 
-        let container = NSView(frame: window.contentView!.bounds)
-        container.autoresizingMask = [.width, .height]
-        nvimView.translatesAutoresizingMaskIntoConstraints = false
-        tablineView.translatesAutoresizingMaskIntoConstraints = false
-
-        container.addSubview(tablineView)
-        container.addSubview(nvimView)
-
-        NSLayoutConstraint.activate([
-            tablineView.topAnchor.constraint(equalTo: container.topAnchor),
-            tablineView.leadingAnchor.constraint(equalTo: container.leadingAnchor),
-            tablineView.trailingAnchor.constraint(equalTo: container.trailingAnchor),
-
-            nvimView.topAnchor.constraint(equalTo: tablineView.bottomAnchor),
-            nvimView.leadingAnchor.constraint(equalTo: container.leadingAnchor),
-            nvimView.trailingAnchor.constraint(equalTo: container.trailingAnchor),
-            nvimView.bottomAnchor.constraint(equalTo: container.bottomAnchor),
-        ])
-
-        window.contentView = container
+        window.contentView = nvimView
         window.makeFirstResponder(nvimView)
     }
 
