@@ -112,6 +112,7 @@
 			);
 			name = MacNeovim;
 			packageProductDependencies = (
+				E1000002AAAAAA0000000001 /* MessagePack */,
 			);
 			productName = MacNeovim;
 			productReference = D8BEFDEE2F7999A900CDE7C3 /* MacNeovim.app */;
@@ -135,6 +136,7 @@
 			);
 			name = MacNeovimTests;
 			packageProductDependencies = (
+				E1000003AAAAAA0000000001 /* MessagePack */,
 			);
 			productName = MacNeovimTests;
 			productReference = D8BEFDFC2F7999AA00CDE7C3 /* MacNeovimTests.xctest */;
@@ -196,6 +198,9 @@
 			mainGroup = D8BEFDE52F7999A900CDE7C3;
 			minimizedProjectReferenceProxies = 1;
 			preferredProjectObjectVersion = 77;
+			packageReferences = (
+				E1000001AAAAAA0000000001 /* XCRemoteSwiftPackageReference "MessagePack.swift" */,
+			);
 			productRefGroup = D8BEFDEF2F7999A900CDE7C3 /* Products */;
 			projectDirPath = "";
 			projectRoot = "";
@@ -398,7 +403,7 @@
 				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = SAU5W824JN;
-				ENABLE_APP_SANDBOX = YES;
+				ENABLE_APP_SANDBOX = NO;
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_USER_SELECTED_FILES = readonly;
 				GENERATE_INFOPLIST_FILE = YES;
@@ -431,7 +436,7 @@
 				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = SAU5W824JN;
-				ENABLE_APP_SANDBOX = YES;
+				ENABLE_APP_SANDBOX = NO;
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_USER_SELECTED_FILES = readonly;
 				GENERATE_INFOPLIST_FILE = YES;
@@ -575,6 +580,31 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		E1000001AAAAAA0000000001 /* XCRemoteSwiftPackageReference "MessagePack.swift" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/qvacua/MessagePack.swift";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 4.1.0;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		E1000002AAAAAA0000000001 /* MessagePack */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = E1000001AAAAAA0000000001 /* XCRemoteSwiftPackageReference "MessagePack.swift" */;
+			productName = MessagePack;
+		};
+		E1000003AAAAAA0000000001 /* MessagePack */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = E1000001AAAAAA0000000001 /* XCRemoteSwiftPackageReference "MessagePack.swift" */;
+			productName = MessagePack;
+		};
+/* End XCSwiftPackageProductDependency section */
+
 	};
 	rootObject = D8BEFDE62F7999A900CDE7C3 /* Project object */;
 }
