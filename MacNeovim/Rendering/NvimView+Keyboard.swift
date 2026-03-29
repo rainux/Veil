@@ -3,6 +3,18 @@ import AppKit
 // MARK: - Keyboard handling
 
 extension NvimView {
+    override func performKeyEquivalent(with event: NSEvent) -> Bool {
+        guard event.modifierFlags.contains(.command),
+              let chars = event.charactersIgnoringModifiers,
+              let digit = chars.first?.wholeNumberValue,
+              digit >= 1 && digit <= 9 else {
+            return super.performKeyEquivalent(with: event)
+        }
+        let cmd = digit == 9 ? "tablast" : "tabnext \(digit)"
+        Task { try? await channel?.command(cmd) }
+        return true
+    }
+
     override func keyDown(with event: NSEvent) {
         let modifiers = event.modifierFlags.intersection([.control, .option, .command])
         if !modifiers.isEmpty {

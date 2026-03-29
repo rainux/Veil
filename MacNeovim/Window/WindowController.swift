@@ -40,36 +40,6 @@ class WindowController: NSWindowController, NSWindowDelegate {
 
         window.contentView = container
         window.makeFirstResponder(nvimView)
-
-        setupTabKeyEquivalents()
-    }
-
-    private func setupTabKeyEquivalents() {
-        let tabMenu = NSMenu(title: "Tabs")
-        for i in 1...9 {
-            let item = NSMenuItem(
-                title: "Tab \(i)",
-                action: #selector(switchToTab(_:)),
-                keyEquivalent: "\(i)"
-            )
-            item.keyEquivalentModifierMask = .command
-            item.tag = i
-            item.target = nil // responder chain
-            tabMenu.addItem(item)
-        }
-        let tabMenuItem = NSMenuItem(title: "Tabs", action: nil, keyEquivalent: "")
-        tabMenuItem.submenu = tabMenu
-        if let mainMenu = NSApp.mainMenu {
-            mainMenu.addItem(tabMenuItem)
-        }
-    }
-
-    @objc func switchToTab(_ sender: NSMenuItem) {
-        let index = sender.tag
-        guard let doc = document as? WindowDocument else { return }
-        Task {
-            try? await doc.channel.command("tabnext \(index)")
-        }
     }
 
     func windowDidResize(_ notification: Notification) {
