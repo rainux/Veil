@@ -3894,3 +3894,141 @@ Run: `xcodebuild test -project MacNeovim.xcodeproj -scheme MacNeovim -destinatio
 git add MacNeovim/Nvim/MsgpackRpc.swift
 git commit -m "Replace byte-by-byte pipe reading with chunk-based data streaming"
 ```
+
+---
+
+### Task 21: Persist and Restore Window Size
+
+**Files:**
+- Modify: `MacNeovim/Window/WindowController.swift`
+
+**Problem:** Window size resets on every launch. New windows don't inherit the last used size.
+
+**Fix:** Use `window.setFrameAutosaveName("MacNeovimWindow")` after creating the window. macOS automatically saves/restores the window frame to UserDefaults. New windows also pick up the saved frame.
+
+- [ ] **Step 1: Read WindowController.swift**
+
+- [ ] **Step 2: Add `window.setFrameAutosaveName("MacNeovimWindow")` in the convenience init, after `window.center()`**
+
+Note: `setFrameAutosaveName` must be called AFTER the window is created but before it's shown. If a saved frame exists, it overrides the initial contentRect and center() call automatically.
+
+- [ ] **Step 3: Build and verify**
+
+- [ ] **Step 4: Commit**
+
+```bash
+git add MacNeovim/Window/WindowController.swift
+git commit -m "Persist and restore window size across launches"
+```
+
+---
+
+### Task 22: Don't Quit When Last Window Closes
+
+**Files:**
+- Modify: `MacNeovim/AppDelegate.swift`
+
+**Problem:** App quits when the last window is closed. User expects the app to stay running so they can open new windows.
+
+**Fix:** Change `applicationShouldTerminateAfterLastWindowClosed` to return `false`. Also update `applicationShouldTerminate` — remove the logic that relies on all windows being closed for quit, since now windows being closed doesn't mean the app is quitting. Keep the Cmd+Q → `:confirm qa` flow.
+
+- [ ] **Step 1: Read AppDelegate.swift**
+
+- [ ] **Step 2: Change `applicationShouldTerminateAfterLastWindowClosed` to return `false`**
+
+- [ ] **Step 3: Build and verify**
+
+- [ ] **Step 4: Commit**
+
+```bash
+git add MacNeovim/AppDelegate.swift
+git commit -m "Keep app running after last window closes"
+```
+
+---
+
+### Task 23: Remove Tabs Menu, Hardcode Cmd+1-9
+
+**Files:**
+- Modify: `MacNeovim/Window/WindowController.swift` (remove setupTabKeyEquivalents and switchToTab)
+- Modify: `MacNeovim/Rendering/NvimView.swift` or `MacNeovim/Rendering/NvimView+Keyboard.swift` (add performKeyEquivalent for Cmd+1-9)
+
+**Problem:** A "Tabs" menu is added to the menu bar, which is unnecessary. Tab switching should be hardcoded Cmd+1-9 without a visible menu.
+
+**Fix:**
+1. Delete `setupTabKeyEquivalents()` method and the `switchToTab(_:)` action from WindowController
+2. Remove the `setupTabKeyEquivalents()` call from WindowController's init
+3. In NvimView (or NvimView+Keyboard), override `performKeyEquivalent(with:)` to intercept Cmd+1 through Cmd+9:
+   - Cmd+1 through Cmd+8: send `:tabnext N` (where N = key number)
+   - Cmd+9: send `:tablast` (jump to last tab)
+   - Return `true` to indicate the event was handled
+
+```swift
+override func performKeyEquivalent(with event: NSEvent) -> Bool {
+    guard event.modifierFlags.contains(.command),
+          let chars = event.charactersIgnoringModifiers,
+          let digit = chars.first?.wholeNumberValue,
+          digit >= 1 && digit <= 9 else {
+        return super.performKeyEquivalent(with: event)
+    }
+    let cmd = digit == 9 ? "tablast" : "tabnext \(digit)"
+    Task { try? await channel?.command(cmd) }
+    return true
+}
+```
+
+Note: Check if `performKeyEquivalent` is already overridden in NvimView+Keyboard.swift — if so, modify that one.
+
+- [ ] **Step 1: Read WindowController.swift and NvimView+Keyboard.swift**
+
+- [ ] **Step 2: Remove `setupTabKeyEquivalents()`, `switchToTab(_:)`, and the call in init from WindowController**
+
+- [ ] **Step 3: Add `performKeyEquivalent` override in NvimView+Keyboard.swift**
+
+- [ ] **Step 4: Build and verify**
+
+- [ ] **Step 5: Commit**
+
+```bash
+git add MacNeovim/Window/WindowController.swift MacNeovim/Rendering/NvimView+Keyboard.swift
+git commit -m "Replace Tabs menu with hardcoded Cmd+1-9 in NvimView"
+```
+
+---
+
+### Task 24: Disable ext_tabline — Let Neovim Render Its Own Tab Bar
+
+**Files:**
+- Modify: `MacNeovim/Nvim/NvimChannel.swift` (change ext_tabline to false)
+- Modify: `MacNeovim/Window/WindowController.swift` (remove TablineView from layout)
+- Modify: `MacNeovim/Window/WindowDocument.swift` (remove tablineUpdate event handling)
+
+**Problem:** We have a custom TablineView with hardcoded purple/blue colors. Instead, let nvim render its own tabline in the grid — boring, vanilla, zero maintenance.
+
+**Fix:**
+1. In NvimChannel's `uiAttach()`, change `ext_tabline: true` to `ext_tabline: false`
+2. In WindowController, remove TablineView from the layout — just use nvimView as the sole content view (or keep the container but remove tablineView constraints and subview)
+3. In WindowDocument's event loop, remove the `case .tablineUpdate` handling
+4. Remove the `tablineView.onSelectTab` wiring in `makeWindowControllers()`
+5. Do NOT delete TablineView.swift — keep it for potential future use
+
+- [ ] **Step 1: Read NvimChannel.swift, WindowController.swift, WindowDocument.swift**
+
+- [ ] **Step 2: Change `ext_tabline` to `false` in NvimChannel.uiAttach()**
+
+- [ ] **Step 3: Simplify WindowController layout — remove TablineView, use nvimView directly as content**
+
+Keep `tablineView` property declaration but don't add it to the view hierarchy. Or remove it from the layout entirely.
+
+- [ ] **Step 4: Remove tablineUpdate handling from WindowDocument event loop**
+
+- [ ] **Step 5: Remove `tablineView.onSelectTab` wiring from WindowDocument.makeWindowControllers()**
+
+- [ ] **Step 6: Build and verify**
+
+- [ ] **Step 7: Commit**
+
+```bash
+git add MacNeovim/Nvim/NvimChannel.swift MacNeovim/Window/WindowController.swift MacNeovim/Window/WindowDocument.swift
+git commit -m "Disable ext_tabline — let neovim render its own tab bar in the grid"
+```
