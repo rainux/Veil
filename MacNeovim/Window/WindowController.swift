@@ -12,6 +12,7 @@ class WindowController: NSWindowController, NSWindowDelegate {
         )
         window.title = "MacNeovim"
         window.center()
+        window.setFrameAutosaveName("MacNeovimWindow")
         window.isReleasedWhenClosed = false
         window.restorationClass = nil
         window.isRestorable = false
