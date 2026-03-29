@@ -38,6 +38,7 @@ class WindowDocument: NSDocument {
             guard let nvimView else { return }
             let gridSize = nvimView.gridSizeForViewSize(nvimView.bounds.size)
             try await channel.uiAttach(width: gridSize.cols, height: gridSize.rows)
+            try? await channel.command("set title")
             startEventLoop()
         } catch {
             NSAlert(error: error).runModal()

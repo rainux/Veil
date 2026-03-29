@@ -18,6 +18,9 @@ class WindowController: NSWindowController, NSWindowDelegate {
         window.isReleasedWhenClosed = false
         window.restorationClass = nil
         window.isRestorable = false
+        let toolbar = NSToolbar()
+        toolbar.showsBaselineSeparator = false
+        window.toolbar = toolbar
         self.init(window: window)
         window.delegate = self
 
