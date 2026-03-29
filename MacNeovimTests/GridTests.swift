@@ -69,7 +69,7 @@ final class GridTests {
         grid.clearDirty()
 
         // Scroll up by 1: rows shift up, row2 becomes empty
-        grid.scroll(top: 0, bottom: 3, left: 0, right: 4, rows: 1)
+        grid.scroll(top: 0, bottom: 3, left: 0, right: 5, rows: 1)
         #expect(grid.cells[0][0].text == "B")
         #expect(grid.cells[1][0].text == "C")
         #expect(grid.cells[2][0].text == " ")
@@ -84,7 +84,7 @@ final class GridTests {
         grid.clearDirty()
 
         // Scroll down by 1 (rows = -1): content shifts down, row0 becomes empty
-        grid.scroll(top: 0, bottom: 3, left: 0, right: 4, rows: -1)
+        grid.scroll(top: 0, bottom: 3, left: 0, right: 5, rows: -1)
         #expect(grid.cells[0][0].text == " ")
         #expect(grid.cells[1][0].text == "A")
         #expect(grid.cells[2][0].text == "B")

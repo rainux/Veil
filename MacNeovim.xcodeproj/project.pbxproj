@@ -6,6 +6,11 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		D8BEFE202F79B31500CDE7C3 /* MessagePack in Frameworks */ = {isa = PBXBuildFile; productRef = E1000002AAAAAA0000000001 /* MessagePack */; };
+		D8BEFE212F79B31500CDE7C3 /* MessagePack in Frameworks */ = {isa = PBXBuildFile; productRef = E1000003AAAAAA0000000001 /* MessagePack */; };
+/* End PBXBuildFile section */
+
 /* Begin PBXContainerItemProxy section */
 		D8BEFDFD2F7999AA00CDE7C3 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
@@ -52,6 +57,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				D8BEFE202F79B31500CDE7C3 /* MessagePack in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -59,6 +65,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				D8BEFE212F79B31500CDE7C3 /* MessagePack in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -197,10 +204,10 @@
 			);
 			mainGroup = D8BEFDE52F7999A900CDE7C3;
 			minimizedProjectReferenceProxies = 1;
-			preferredProjectObjectVersion = 77;
 			packageReferences = (
-				E1000001AAAAAA0000000001 /* XCRemoteSwiftPackageReference "MessagePack.swift" */,
+				E1000001AAAAAA0000000001 /* XCRemoteSwiftPackageReference "MessagePack" */,
 			);
+			preferredProjectObjectVersion = 77;
 			productRefGroup = D8BEFDEF2F7999A900CDE7C3 /* Products */;
 			projectDirPath = "";
 			projectRoot = "";
@@ -582,7 +589,7 @@
 /* End XCConfigurationList section */
 
 /* Begin XCRemoteSwiftPackageReference section */
-		E1000001AAAAAA0000000001 /* XCRemoteSwiftPackageReference "MessagePack.swift" */ = {
+		E1000001AAAAAA0000000001 /* XCRemoteSwiftPackageReference "MessagePack" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/qvacua/MessagePack.swift";
 			requirement = {
@@ -595,16 +602,15 @@
 /* Begin XCSwiftPackageProductDependency section */
 		E1000002AAAAAA0000000001 /* MessagePack */ = {
 			isa = XCSwiftPackageProductDependency;
-			package = E1000001AAAAAA0000000001 /* XCRemoteSwiftPackageReference "MessagePack.swift" */;
+			package = E1000001AAAAAA0000000001 /* XCRemoteSwiftPackageReference "MessagePack" */;
 			productName = MessagePack;
 		};
 		E1000003AAAAAA0000000001 /* MessagePack */ = {
 			isa = XCSwiftPackageProductDependency;
-			package = E1000001AAAAAA0000000001 /* XCRemoteSwiftPackageReference "MessagePack.swift" */;
+			package = E1000001AAAAAA0000000001 /* XCRemoteSwiftPackageReference "MessagePack" */;
 			productName = MessagePack;
 		};
 /* End XCSwiftPackageProductDependency section */
-
 	};
 	rootObject = D8BEFDE62F7999A900CDE7C3 /* Project object */;
 }

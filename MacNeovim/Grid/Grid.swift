@@ -89,41 +89,41 @@ final class Grid {
     /// Scroll within a region.
     /// Positive rows = shift content up (rows scroll up, new blank rows appear at bottom).
     /// Negative rows = shift content down (rows scroll down, new blank rows appear at top).
+    /// Scroll within a region. Neovim sends exclusive bounds (bottom, right),
+    /// so we convert to inclusive internally: bot = bottom - 1, rt = right - 1.
     func scroll(top: Int, bottom: Int, left: Int, right: Int, rows: Int) {
         guard rows != 0 else { return }
-        let emptyRow = Array(repeating: Cell.empty, count: size.cols)
+        // Neovim grid_scroll uses exclusive bottom/right
+        let bot = bottom - 1
+        let rt = right - 1
+        guard top >= 0, bot < size.rows, left >= 0, rt < size.cols else { return }
+
+        let colRange = left...rt
 
         if rows > 0 {
-            // Shift up: source row (top + rows) goes to dest row (top)
-            for destRow in top..<(bottom - rows) {
+            for destRow in top...(bot - rows) {
                 let srcRow = destRow + rows
-                guard srcRow < bottom && srcRow < size.rows && destRow >= 0 else { continue }
-                cells[destRow].replaceSubrange(left...right, with: cells[srcRow][left...right])
+                guard srcRow <= bot else { continue }
+                cells[destRow].replaceSubrange(colRange, with: cells[srcRow][colRange])
                 dirtyRows.insert(destRow)
                 recomputeFlatCharIndices(row: destRow)
             }
-            // Clear newly exposed rows at the bottom
-            for r in max(top, bottom - rows)..<bottom {
-                guard r >= 0 && r < size.rows else { continue }
-                cells[r].replaceSubrange(left...right, with: emptyRow[left...right])
+            for r in (bot - rows + 1)...bot {
+                for col in colRange { cells[r][col] = .empty }
                 dirtyRows.insert(r)
                 recomputeFlatCharIndices(row: r)
             }
         } else {
-            // Shift down: negative rows means scroll down
             let absRows = -rows
-            // Iterate from bottom to top to avoid overwriting
-            for destRow in stride(from: bottom - 1, through: top + absRows, by: -1) {
+            for destRow in stride(from: bot, through: top + absRows, by: -1) {
                 let srcRow = destRow - absRows
-                guard srcRow >= top && srcRow >= 0 && destRow < size.rows else { continue }
-                cells[destRow].replaceSubrange(left...right, with: cells[srcRow][left...right])
+                guard srcRow >= top else { continue }
+                cells[destRow].replaceSubrange(colRange, with: cells[srcRow][colRange])
                 dirtyRows.insert(destRow)
                 recomputeFlatCharIndices(row: destRow)
             }
-            // Clear newly exposed rows at the top
-            for r in top..<min(top + absRows, bottom) {
-                guard r >= 0 && r < size.rows else { continue }
-                cells[r].replaceSubrange(left...right, with: emptyRow[left...right])
+            for r in top..<(top + absRows) {
+                for col in colRange { cells[r][col] = .empty }
                 dirtyRows.insert(r)
                 recomputeFlatCharIndices(row: r)
             }

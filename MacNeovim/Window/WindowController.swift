@@ -13,6 +13,8 @@ class WindowController: NSWindowController, NSWindowDelegate {
         window.title = "MacNeovim"
         window.center()
         window.isReleasedWhenClosed = false
+        window.restorationClass = nil
+        window.isRestorable = false
         self.init(window: window)
         window.delegate = self
 
