@@ -23,6 +23,7 @@ struct ModeInfo: Equatable, Sendable {
 
     var name: String
     var cursorShape: CursorShape
+    var cellPercentage: Int
 }
 
 // MARK: - NvimEvent
@@ -209,17 +210,20 @@ enum NvimEvent: Sendable {
         guard let dict = value.dictionaryValue else { return nil }
         var name = ""
         var shape = ModeInfo.CursorShape.block
+        var cellPercentage = 0
         for (k, v) in dict {
             switch k.stringValue {
             case "name":
                 name = v.stringValue ?? ""
             case "cursor_shape":
                 shape = ModeInfo.CursorShape(rawValue: v.stringValue ?? "") ?? .block
+            case "cell_percentage":
+                cellPercentage = v.intValue
             default:
                 break
             }
         }
-        return ModeInfo(name: name, cursorShape: shape)
+        return ModeInfo(name: name, cursorShape: shape, cellPercentage: cellPercentage)
     }
 
     private nonisolated static func parseTabpageInfo(_ value: MessagePackValue) -> TabpageInfo? {

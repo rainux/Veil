@@ -237,6 +237,7 @@ final class NvimView: NSView {
         guard modeIdx >= 0 && modeIdx < modeInfoList.count else { return }
         let info = modeInfoList[modeIdx]
         currentCursorShape = info.cursorShape
+        currentCursorCellPercentage = info.cellPercentage > 0 ? info.cellPercentage : 100
     }
 
     // MARK: - Coordinate conversion
