@@ -45,10 +45,11 @@ jobs:
       - name: Extract tag annotation
         id: tag_msg
         run: |
-          TAG_MSG=$(git tag -l --format='%(contents)' ${GITHUB_REF_NAME})
-          echo "body<<EOF" >> $GITHUB_OUTPUT
-          echo "$TAG_MSG" >> $GITHUB_OUTPUT
-          echo "EOF" >> $GITHUB_OUTPUT
+          # Fetch the tag object explicitly to ensure annotation is available
+          git fetch origin tag ${GITHUB_REF_NAME} --no-tags --force
+          echo "body<<ENDOFBODY" >> $GITHUB_OUTPUT
+          git for-each-ref "refs/tags/${GITHUB_REF_NAME}" --format='%(contents)' >> $GITHUB_OUTPUT
+          echo "ENDOFBODY" >> $GITHUB_OUTPUT
 
       - name: Create Release
         uses: softprops/action-gh-release@v2
