@@ -4634,3 +4634,242 @@ let baselineY = descent + leading + extraPadding
 git add Veil/Rendering/NvimView.swift Veil/Rendering/GlyphCache.swift
 git commit -m "Default line height 1.2x for comfortable reading"
 ```
+
+---
+
+### Task 35: Edit Menu — Standard Actions via Neovim
+
+**Files:**
+- Modify: `Veil/Rendering/NvimView+Keyboard.swift` (add action methods + update systemKeys)
+- Modify: `Veil/Base.lproj/MainMenu.xib` (remove Find and everything below it in Edit menu)
+
+**Problem:** Edit menu items (Undo/Redo/Cut/Copy/Paste/Select All) are disabled because NvimView doesn't implement the standard AppKit actions. Items from Find onward are unnecessary.
+
+**Fix:**
+
+1. Add standard action implementations on NvimView:
+
+```swift
+// MARK: - Standard Edit actions
+
+@objc func undo(_ sender: Any?) {
+    Task { await channel?.send(key: "u") }
+}
+
+@objc func redo(_ sender: Any?) {
+    Task { await channel?.send(key: "<C-r>") }
+}
+
+@objc func cut(_ sender: Any?) {
+    Task { await channel?.send(key: "\"+d") }
+}
+
+@objc func copy(_ sender: Any?) {
+    Task { await channel?.send(key: "\"+y") }
+}
+
+@objc func paste(_ sender: Any?) {
+    guard let text = NSPasteboard.general.string(forType: .string) else { return }
+    Task { await channel?.request("nvim_paste", params: [.string(text), .bool(true), .int(-1)]) }
+}
+
+@objc func selectAll(_ sender: Any?) {
+    Task { await channel?.send(key: "ggVG") }
+}
+```
+
+Note: `nvim_paste` API takes (data, crlf, phase). phase=-1 means single paste operation. This handles paste correctly in all modes (normal, insert, cmdline).
+
+2. In `performKeyEquivalent`, add `"z"` (Cmd+Z undo), `"a"` (Cmd+A select all) to systemKeys so they reach the Edit menu. Also add the backtick for Cmd+` window cycling:
+
+```swift
+let systemKeys: Set<String> = ["q", "n", "h", "m", ",", "z", "a", "`"]
+```
+
+Wait — Cmd+Z/A should NOT go to the system menu. They should go through the menu's Undo/Select All items which call our `undo:` / `selectAll:` action on the first responder (NvimView). So they DO need to pass through to the menu system. Yes, add them to systemKeys.
+
+But Cmd+C/V/X also need to pass through to Edit menu (which calls `copy:`/`paste:`/`cut:` on the first responder). So add `"c"`, "v"`, `"x"` to systemKeys too:
+
+```swift
+let systemKeys: Set<String> = ["q", "n", "h", "m", ",", "z", "a", "c", "v", "x", "`"]
+```
+
+3. Remove Find and everything after it from Edit menu in MainMenu.xib.
+
+- [ ] **Step 1: Read NvimView+Keyboard.swift and MainMenu.xib**
+- [ ] **Step 2: Add standard edit action methods to NvimView**
+- [ ] **Step 3: Update systemKeys in performKeyEquivalent**
+- [ ] **Step 4: Remove Find and below from Edit menu in XIB**
+- [ ] **Step 5: Build and verify**
+- [ ] **Step 6: Commit**
+
+```bash
+git add Veil/Rendering/NvimView+Keyboard.swift Veil/Base.lproj/MainMenu.xib
+git commit -m "Implement standard Edit menu actions via neovim, remove Find"
+```
+
+---
+
+### Task 36: File Menu — Close Tab/Window, Save
+
+**Files:**
+- Modify: `Veil/Base.lproj/MainMenu.xib` (modify Close, add Close Window, remove Save As/Print/Page Setup)
+- Modify: `Veil/Rendering/NvimView+Keyboard.swift` (add save/close actions, update systemKeys)
+- Modify: `Veil/Window/WindowDocument.swift` (add close tab/window logic)
+
+**Problem:** File menu Close should close tab (or window if only 1 tab). Need Close Window (Cmd+Shift+W). Save should send `:w`. Remove unnecessary items.
+
+**Fix:**
+
+1. Close (Cmd+W) logic: query tab count, if > 1 send `:tabclose`, else close the window document.
+
+Add to NvimView or WindowDocument:
+```swift
+@objc func closeTabOrWindow(_ sender: Any?) {
+    Task {
+        let (_, result) = await channel?.request("nvim_eval", params: [.string("tabpagenr('$')")]) ?? (.nil, .nil)
+        let tabCount = result.intValue
+        if tabCount > 1 {
+            try? await channel?.command("tabclose")
+        } else {
+            // Close window — trigger the document close flow
+            window?.performClose(nil)
+        }
+    }
+}
+```
+
+2. Close Window (Cmd+Shift+W): directly close the window via `window?.performClose(nil)`.
+
+3. Save (Cmd+S): send `:w` to nvim.
+
+4. In MainMenu.xib:
+   - Change Close's action to `closeTabOrWindow:` (or rewire to our responder)
+   - Add Close Window item with Cmd+Shift+W
+   - Remove Save As, Print, Page Setup
+
+5. Add `"s"`, `"w"` to systemKeys so they reach the menu.
+
+- [ ] **Step 1: Read MainMenu.xib, NvimView+Keyboard.swift, WindowDocument.swift**
+- [ ] **Step 2: Add closeTabOrWindow and save actions**
+- [ ] **Step 3: Update systemKeys to include "s" and "w"**
+- [ ] **Step 4: Modify File menu in XIB — rewire Close, add Close Window, remove items**
+- [ ] **Step 5: Build and verify**
+- [ ] **Step 6: Commit**
+
+```bash
+git add Veil/Base.lproj/MainMenu.xib Veil/Rendering/NvimView+Keyboard.swift Veil/Window/WindowDocument.swift
+git commit -m "File menu: close tab/window, save via nvim, remove unnecessary items"
+```
+
+---
+
+### Task 37: View Menu — Keep Only Full Screen
+
+**Files:**
+- Modify: `Veil/Base.lproj/MainMenu.xib` (remove all View items except Full Screen)
+- Modify: `Veil/Rendering/NvimView+Keyboard.swift` (ensure Cmd+Ctrl+F passes to system)
+
+**Problem:** View menu has unnecessary items. Only Full Screen should remain. Cmd+Ctrl+F should trigger full screen via the system.
+
+**Fix:**
+
+1. In MainMenu.xib, remove all View menu items except "Enter Full Screen" / "Toggle Full Screen".
+2. Cmd+Ctrl+F: in `performKeyEquivalent`, when both `.command` and `.control` are present, let it pass to the system (return `super.performKeyEquivalent`). Actually, `performKeyEquivalent` currently only checks for `.command` alone. Cmd+Ctrl+F has both `.command` and `.control`, so it goes through `sendKeyDirectly` via `keyDown` (since modifiers include `.control`). Need to ensure it reaches the menu system instead.
+
+The simplest fix: in `performKeyEquivalent`, also handle Cmd+Ctrl combinations. When Cmd+Ctrl+F is detected, return `super.performKeyEquivalent(with: event)` to let the menu system handle Full Screen.
+
+Or: add a check in `keyDown` — if Cmd+Ctrl+F, don't send to nvim, let `performKeyEquivalent` handle it. But `keyDown` is called after `performKeyEquivalent`…
+
+Actually, `performKeyEquivalent` is called first. Currently it only triggers on `.command`. Cmd+Ctrl+F has `.command`, so it enters performKeyEquivalent. "f" is not in systemKeys, so it gets sent to nvim. Fix: check if Ctrl is also present, and if the key is "f", pass to system.
+
+Simpler: just add a special case before the systemKeys check:
+```swift
+// Cmd+Ctrl+F: Full Screen (system)
+if event.modifierFlags.contains(.control) {
+    return super.performKeyEquivalent(with: event)
+}
+```
+
+This passes ALL Cmd+Ctrl combinations to the system, which is reasonable.
+
+- [ ] **Step 1: Read MainMenu.xib and NvimView+Keyboard.swift**
+- [ ] **Step 2: Strip View menu to only Full Screen**
+- [ ] **Step 3: Pass Cmd+Ctrl combinations to system in performKeyEquivalent**
+- [ ] **Step 4: Build and verify**
+- [ ] **Step 5: Commit**
+
+```bash
+git add Veil/Base.lproj/MainMenu.xib Veil/Rendering/NvimView+Keyboard.swift
+git commit -m "Simplify View menu to Full Screen only"
+```
+
+---
+
+### Task 38: TouchPad Smooth Scrolling
+
+**Files:**
+- Modify: `Veil/Rendering/NvimView+Mouse.swift`
+
+**Problem:** TouchPad scrolling has no effect. The current `scrollWheel` implementation may not be handling trackpad events correctly — trackpad generates many small delta events vs mouse wheel's discrete events.
+
+**Fix:**
+
+Read the current `scrollWheel` implementation first. The issue might be:
+1. `event.scrollingDeltaY` is in pixels for trackpad but the code divides by `cellSize.height` to get line count — small deltas produce `count = 0`
+2. Need to accumulate fractional scroll amounts
+
+Implementation:
+- Add a `scrollDeltaAccumulator: CGFloat` property to NvimView
+- On each scroll event, accumulate `scrollingDeltaY`
+- When accumulated amount exceeds one cell height, send scroll events and subtract
+- For precise scrolling (trackpad), use `event.hasPreciseScrollingDeltas` to detect trackpad
+- For mouse wheel (non-precise), keep the existing behavior
+
+```swift
+override func scrollWheel(with event: NSEvent) {
+    let position = gridPosition(for: convert(event.locationInWindow, from: nil))
+
+    if event.hasPreciseScrollingDeltas {
+        // Trackpad: accumulate pixel deltas
+        scrollDeltaY += event.scrollingDeltaY
+        while abs(scrollDeltaY) >= cellSize.height {
+            let button = scrollDeltaY > 0 ? "wheel_up" : "wheel_down"
+            scrollDeltaY -= (scrollDeltaY > 0 ? 1 : -1) * cellSize.height
+            let modifier = modifierString(event.modifierFlags)
+            Task {
+                await channel?.inputMouse(button: button, action: "press", modifier: modifier, grid: 0, row: position.row, col: position.col)
+            }
+        }
+    } else {
+        // Mouse wheel: discrete events
+        let deltaY = event.scrollingDeltaY
+        if deltaY != 0 {
+            let button = deltaY > 0 ? "wheel_up" : "wheel_down"
+            let count = max(1, Int(abs(deltaY)))
+            let modifier = modifierString(event.modifierFlags)
+            for _ in 0..<count {
+                Task {
+                    await channel?.inputMouse(button: button, action: "press", modifier: modifier, grid: 0, row: position.row, col: position.col)
+                }
+            }
+        }
+    }
+}
+```
+
+Add property to NvimView.swift:
+```swift
+var scrollDeltaY: CGFloat = 0
+```
+
+- [ ] **Step 1: Read NvimView+Mouse.swift and NvimView.swift**
+- [ ] **Step 2: Add scrollDeltaY property to NvimView**
+- [ ] **Step 3: Rewrite scrollWheel with trackpad accumulation**
+- [ ] **Step 4: Build and verify**
+- [ ] **Step 5: Commit**
+
+```bash
+git add Veil/Rendering/NvimView+Mouse.swift Veil/Rendering/NvimView.swift
+git commit -m "Support trackpad smooth scrolling with delta accumulation"
+```
