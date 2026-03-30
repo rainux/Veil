@@ -17,6 +17,11 @@ extension NvimView {
             return true
         }
 
+        // Cmd+Ctrl combinations: pass to system (e.g. Cmd+Ctrl+F for Full Screen)
+        if event.modifierFlags.contains(.control) {
+            return super.performKeyEquivalent(with: event)
+        }
+
         // Let system handle these Cmd+key combos
         let systemKeys: Set<String> = ["q", "n", "h", "m", ",", "z", "x", "c", "v", "a", "`", "s", "w"]
         if systemKeys.contains(chars.lowercased()) {
