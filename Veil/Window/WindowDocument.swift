@@ -142,17 +142,6 @@ class WindowDocument: NSDocument {
         eventLoopTask?.cancel()
         Task { await channel.stop() }
         super.close()
-
-        // If this document was part of a Cmd+Q quit attempt and all
-        // quit-targeted documents are now closed, finish termination.
-        if let appDelegate = NSApp.delegate as? AppDelegate {
-            let wasPartOfQuit = appDelegate.quittingDocuments.remove(ObjectIdentifier(self)) != nil
-            if wasPartOfQuit,
-               appDelegate.quittingDocuments.isEmpty,
-               NSDocumentController.shared.documents.isEmpty {
-                NSApp.terminate(nil)
-            }
-        }
     }
 
     func windowDidResize(to size: NSSize) {

@@ -44,23 +44,40 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
     func applicationWillTerminate(_ aNotification: Notification) {}
 
-    // Tracks which documents should close as part of a Cmd+Q quit attempt.
-    // When all tracked documents have closed, the app terminates.
-    // Documents closed normally (Cmd+W) are not in this set, so they
-    // don't trigger app termination.
-    var quittingDocuments: Set<ObjectIdentifier> = []
-
+    // Quit strategy: delegate quit confirmation to nvim via `:confirm qa`.
+    // We return .terminateLater to keep the termination pending, then
+    // sequentially ask each document to quit:
+    //
+    // - If no buffers are modified, `confirm qa` causes nvim to exit
+    //   immediately. The RPC call throws (connection lost) and we move on.
+    // - If buffers are modified, nvim prompts the user inside the terminal.
+    //   Save/discard → nvim exits → throws, same as above.
+    //   Cancel → nvim stays running → command returns normally →
+    //   we reply(false) to abort termination.
+    // - After all documents have exited, we reply(true) to finish termination.
+    //
+    // WindowDocument.close() deliberately contains no quit logic — it only
+    // handles cleanup (cancel event loop, stop channel). The quit decision
+    // is fully driven by the sequential loop here.
     func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
         let documents = NSDocumentController.shared.documents.compactMap { $0 as? WindowDocument }
         if documents.isEmpty { return .terminateNow }
 
-        quittingDocuments = Set(documents.map { ObjectIdentifier($0) })
-        for doc in documents {
-            Task { @MainActor in
-                try? await doc.channel.command("confirm qa")
+        Task { @MainActor in
+            for doc in documents {
+                do {
+                    try await doc.channel.command("confirm qa")
+                    // Command returned normally — user cancelled the quit prompt
+                    NSApp.reply(toApplicationShouldTerminate: false)
+                    return
+                } catch {
+                    // Command threw — nvim exited, continue to next document
+                }
             }
+            // All documents closed successfully
+            NSApp.reply(toApplicationShouldTerminate: true)
         }
-        return .terminateCancel
+        return .terminateLater
     }
 
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool { false }
