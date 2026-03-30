@@ -19,6 +19,12 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     }()
 
     func applicationDidFinishLaunching(_ aNotification: Notification) {
+        // Writing to a closed pipe sends SIGPIPE, which terminates the process
+        // by default. This happens when nvim exits but an RPC call is still
+        // in flight (e.g. windowDidResignKey sends nvim_ui_set_focus after
+        // :qa closes the nvim process). Ignoring the signal lets the write
+        // fail with EPIPE instead, which MsgpackRpc.request catches gracefully.
+        signal(SIGPIPE, SIG_IGN)
         Task.detached { NvimProcess.warmUpEnvironment() }
         addProfilePickerMenuItem()
         NSApp.activate(ignoringOtherApps: true)

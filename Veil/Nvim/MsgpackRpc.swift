@@ -61,7 +61,18 @@ actor MsgpackRpc {
 
         return await withCheckedContinuation { continuation in
             pendingRequests[msgid] = continuation
-            inPipe.write(data)
+            // NSFileHandle has two write APIs: the ObjC write(_:) throws an
+            // NSFileHandleOperationException on broken pipe, which is an ObjC
+            // exception that Swift cannot catch — crashing the process. The
+            // Swift write(contentsOf:) throws a regular Swift error instead.
+            // Example: nvim exits via :qa, windowDidResignKey fires and tries
+            // to send nvim_ui_set_focus — the pipe is already closed.
+            do {
+                try inPipe.write(contentsOf: data)
+            } catch {
+                pendingRequests.removeValue(forKey: msgid)
+                continuation.resume(returning: (error: .string("write failed: \(error.localizedDescription)"), result: .nil))
+            }
         }
     }
 
