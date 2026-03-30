@@ -20,6 +20,14 @@ Your Neovim config, rendered natively with AppKit, in proper macOS windows. Noth
 
 Veil uses your system-installed neovim. No bundled binary — you always get the latest version you chose to install.
 
+## Install
+
+Download `Veil.zip` from [Releases](https://github.com/rainux/Veil/releases), unzip, and move `Veil.app` to `/Applications`. Then remove the quarantine attribute so macOS doesn't block it:
+
+```bash
+xattr -cr /Applications/Veil.app
+```
+
 ## Build
 
 Open `Veil.xcodeproj` in Xcode and run, or:
