@@ -4,6 +4,7 @@ import MessagePack
 class WindowDocument: NSDocument {
     var profile = Profile.default
     var nvimArgs: [String] = []
+    var deferDisplay = false
 
     var channel: NvimChannel!
     private let grid = Grid()
@@ -49,6 +50,14 @@ class WindowDocument: NSDocument {
     override func makeWindowControllers() {
         let controller = WindowController()
         controller.nvimView.channel = channel
+        // When deferDisplay is set, start fully transparent so the window is
+        // invisible until nvim finishes initialization. Without this, heavy
+        // configs (e.g. LazyVim) show a visible flash as nvim renders
+        // intermediate states while loading plugins and colorscheme. Alpha is
+        // restored at the end of startNvim() after all init scripts complete.
+        // On initial app launch this is skipped — the macOS app activation
+        // animation already masks the initialization delay.
+        if deferDisplay { controller.window?.alphaValue = 0 }
         addWindowController(controller)
         Task { await startNvim() }
     }
@@ -67,7 +76,10 @@ class WindowDocument: NSDocument {
             try await channel.uiAttach(width: gridSize.cols, height: gridSize.rows)
             startEventLoop()
 
-            // Register autocmds for title updates on buffer/tab changes
+            // Register autocmds AFTER uiAttach — the initial BufEnter fires
+            // during nvim startup (before this point), so it's intentionally
+            // missed. This keeps titleReady false, suppressing the ugly initial
+            // set_title from Startify or similar plugins.
             let (_, apiInfo) = await channel.request("nvim_get_api_info", params: [])
             if let channelId = apiInfo.arrayValue?.first?.intValue {
                 try? await channel.command(
@@ -80,6 +92,11 @@ class WindowDocument: NSDocument {
 
             // Enable nvim title — set_title events will be ignored until first BufEnter
             try? await channel.command("set title")
+
+            // By this point nvim has processed all init scripts, plugins, and
+            // colorscheme — RPC commands are sequential, so the awaits above
+            // guarantee VimEnter/UIEnter have already fired. Safe to reveal.
+            if deferDisplay { windowController?.window?.alphaValue = 1 }
         } catch {
             NSAlert(error: error).runModal()
             close()
