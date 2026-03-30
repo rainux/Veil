@@ -5029,3 +5029,168 @@ And update `updateFont` — remove `markedTextLayer.font` / `markedTextLayer.fon
 git add Veil/Rendering/NvimView.swift Veil/Rendering/NvimView+Keyboard.swift
 git commit -m "Fix IME marked text: route keys through IME during composition, render with GlyphCache"
 ```
+
+---
+
+### Task 40: CLI Launcher — `veil` Command
+
+**Files:**
+- Create: `Veil/bin/veil` (shell script, will be copied into app bundle)
+- Modify: `Veil/Nvim/NvimProcess.swift` (accept extra nvim args)
+- Modify: `Veil/Nvim/NvimChannel.swift` (pass extra args through)
+- Modify: `Veil/Window/WindowDocument.swift` (read ProcessInfo.arguments, pass to channel)
+- Modify: `Veil.xcodeproj/project.pbxproj` (add Copy Files build phase for bin/)
+- Modify: `README.md` (add CLI install instructions)
+
+**Two parts:**
+
+#### Part A: App reads launch arguments and passes to nvim
+
+When the user runs `Veil.app/Contents/MacOS/Veil file.txt` or `Veil.app/Contents/MacOS/Veil -d a.txt b.txt`, the app should pass those arguments to nvim.
+
+`ProcessInfo.processInfo.arguments` contains the launch arguments. The first element is the executable path — skip it. Everything else should be appended to `["--embed"]` when starting nvim.
+
+**NvimProcess.swift:**
+Add an `extraArgs` parameter:
+```swift
+init(nvimPath: String = "", cwd: String = NSHomeDirectory(),
+     appName: String = "nvim", extraArgs: [String] = [],
+     additionalEnv: [String: String] = [:]) {
+    // ...
+    self.extraArgs = extraArgs
+}
+```
+
+In `start()`:
+```swift
+process.arguments = ["--embed"] + extraArgs
+```
+
+**NvimChannel.swift:**
+Pass `extraArgs` through to NvimProcess:
+```swift
+func start(nvimPath: String = "", cwd: String = NSHomeDirectory(),
+           appName: String = "nvim", extraArgs: [String] = []) async throws {
+    let proc = NvimProcess(nvimPath: nvimPath, cwd: cwd, appName: appName, extraArgs: extraArgs)
+```
+
+**WindowDocument.swift / AppDelegate.swift:**
+Read args on first window creation. In AppDelegate's `applicationDidFinishLaunching` or `createWindow`:
+```swift
+// Read CLI args (skip first which is the executable path)
+let cliArgs = Array(ProcessInfo.processInfo.arguments.dropFirst())
+```
+
+Pass to the first WindowDocument. Only the first window gets CLI args — subsequent Cmd+N windows don't.
+
+Store on AppDelegate:
+```swift
+private var initialCliArgs: [String] = Array(ProcessInfo.processInfo.arguments.dropFirst())
+```
+
+In `createWindow`, if `initialCliArgs` is non-empty, pass them and clear:
+```swift
+func createWindow(profile: Profile) {
+    let doc = WindowDocument()
+    doc.profile = profile
+    if !initialCliArgs.isEmpty {
+        doc.nvimArgs = initialCliArgs
+        initialCliArgs = []
+    }
+    // ...
+}
+```
+
+Add `var nvimArgs: [String] = []` to WindowDocument, pass to `channel.start()`:
+```swift
+try await channel.start(nvimPath: "", cwd: NSHomeDirectory(), appName: profile.name, extraArgs: nvimArgs)
+```
+
+#### Part B: Shell script in app bundle
+
+Create `Veil/bin/veil`:
+```bash
+#!/bin/sh
+# Launch Veil with all arguments passed to the embedded nvim.
+# Symlink this to a directory in your PATH:
+#   ln -s /Applications/Veil.app/Contents/bin/veil ~/.local/bin/veil
+
+# Resolve the real path of this script (handles symlinks)
+self_path="$0"
+while [ -L "$self_path" ]; do
+    dir="$(cd "$(dirname "$self_path")" && pwd -P)"
+    self_path="$(readlink "$self_path")"
+    [ "${self_path#/}" = "$self_path" ] && self_path="$dir/$self_path"
+done
+binary="$(cd "$(dirname "$self_path")/../MacOS" && pwd -P)/Veil"
+
+if ! [ -x "$binary" ]; then
+    echo "Cannot find Veil executable." >&2
+    exit 1
+fi
+
+exec "$binary" "$@"
+```
+
+Also create symlinks in the same directory:
+```bash
+cd Veil/bin
+ln -s veil gvim
+ln -s veil gvimdiff
+```
+
+The script should detect its invocation name (like MacVim does) and set options:
+- Called as `gvimdiff` → prepend `-d` to args
+- Called as `gvim` → just pass args through (same as `veil`)
+
+Add name detection to the script:
+```bash
+name="$(basename "$0")"
+opts=""
+case "$name" in
+    *vimdiff) opts="-d" ;;
+esac
+
+exec "$binary" $opts "$@"
+```
+
+This script:
+- Resolves symlinks to find the real script location
+- Derives the Veil binary path from `Contents/bin/../MacOS/Veil`
+- Detects invocation name for vimdiff mode
+- `exec`s the binary with all arguments
+
+Add a build phase in Xcode to copy `Veil/bin/` into the app bundle at `Contents/bin/`. This is a "Copy Files" build phase with destination "Wrapper" and subpath "Contents/bin".
+
+#### Part C: README update
+
+Add CLI section:
+```markdown
+## CLI
+
+Veil ships a `veil` command inside the app bundle. Symlink it to your PATH:
+
+    ln -s /Applications/Veil.app/Contents/bin/veil ~/.local/bin/veil
+    ln -s /Applications/Veil.app/Contents/bin/gvim ~/.local/bin/gvim
+    ln -s /Applications/Veil.app/Contents/bin/gvimdiff ~/.local/bin/gvimdiff
+
+Then use it like nvim:
+
+    veil file.txt
+    veil -d file1.txt file2.txt
+    gvimdiff file1.txt file2.txt    # same as veil -d
+```
+
+- [ ] **Step 1: Read NvimProcess.swift, NvimChannel.swift, WindowDocument.swift, AppDelegate.swift**
+- [ ] **Step 2: Add extraArgs to NvimProcess, NvimChannel, WindowDocument**
+- [ ] **Step 3: Read CLI args in AppDelegate, pass to first window**
+- [ ] **Step 4: Create the shell script at Veil/bin/veil, make it executable**
+- [ ] **Step 5: Add Copy Files build phase in project.pbxproj (or note for manual Xcode setup)**
+- [ ] **Step 6: Update README with CLI section**
+- [ ] **Step 7: Build and verify**
+- [ ] **Step 8: Commit**
+
+```bash
+git add Veil/Nvim/NvimProcess.swift Veil/Nvim/NvimChannel.swift Veil/Window/WindowDocument.swift Veil/AppDelegate.swift Veil/bin/veil README.md Veil.xcodeproj/project.pbxproj
+git commit -m "Add veil CLI launcher with argument passthrough to nvim"
+```
