@@ -47,12 +47,18 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             // Resolve relative paths before forwarding — the existing instance
             // has a different cwd, so "Makefile" would resolve to the wrong file.
             let absolutePaths = initialCliArgs.map { URL(fileURLWithPath: $0).path }
-            if !absolutePaths.isEmpty,
-               let data = try? JSONSerialization.data(withJSONObject: absolutePaths),
-               let json = String(data: data, encoding: .utf8) {
-                DistributedNotificationCenter.default().post(
-                    name: .veilOpenFiles, object: json
-                )
+            // Forward NVIM_APPNAME so the existing instance opens the window
+            // with the correct nvim profile (e.g. NVIM_APPNAME=nvim-nvchad gvim).
+            let nvimAppName = ProcessInfo.processInfo.environment["NVIM_APPNAME"]
+            if !absolutePaths.isEmpty || nvimAppName != nil {
+                var payload: [String: Any] = ["files": absolutePaths]
+                if let nvimAppName { payload["nvimAppName"] = nvimAppName }
+                if let data = try? JSONSerialization.data(withJSONObject: payload),
+                   let json = String(data: data, encoding: .utf8) {
+                    DistributedNotificationCenter.default().post(
+                        name: .veilOpenFiles, object: json
+                    )
+                }
             }
             existing.activate()
             // Terminate immediately — no resources to clean up, notification
@@ -73,7 +79,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         // a window will already exist, so we skip the default one.
         DispatchQueue.main.async {
             if NSDocumentController.shared.documents.isEmpty {
-                self.createWindow(profile: Profile.default)
+                self.createWindow(profile: self.profileFromEnvironment())
             }
         }
     }
@@ -157,6 +163,16 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         }
     }
 
+    /// Read NVIM_APPNAME from the process environment to select a nvim profile.
+    /// This is how CLI invocations (e.g. `NVIM_APPNAME=nvim-nvchad gvim`) choose
+    /// which config directory nvim uses on initial launch.
+    private func profileFromEnvironment() -> Profile {
+        if let appName = ProcessInfo.processInfo.environment["NVIM_APPNAME"] {
+            return Profile(name: appName, displayName: appName)
+        }
+        return Profile.default
+    }
+
     /// Creates and shows a new WindowDocument with the given profile.
     func createWindow(profile: Profile) {
         let doc = WindowDocument()
@@ -173,10 +189,14 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     @objc private func handleOpenFilesNotification(_ notification: Notification) {
         guard let json = notification.object as? String,
               let data = json.data(using: .utf8),
-              let files = try? JSONSerialization.jsonObject(with: data) as? [String],
-              !files.isEmpty else { return }
+              let payload = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else { return }
+        let files = payload["files"] as? [String] ?? []
+        // Use forwarded NVIM_APPNAME to select the correct nvim profile,
+        // falling back to default if not specified.
+        let nvimAppName = payload["nvimAppName"] as? String
+        let profile = nvimAppName.map { Profile(name: $0, displayName: $0) } ?? Profile.default
         let doc = WindowDocument()
-        doc.profile = Profile.default
+        doc.profile = profile
         doc.nvimArgs = files
         NSDocumentController.shared.addDocument(doc)
         doc.makeWindowControllers()
