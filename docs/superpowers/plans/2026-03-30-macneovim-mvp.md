@@ -4405,3 +4405,97 @@ Fix: Add `nonisolated` to CellAttributes's default `init()` in CellAttributes.sw
 git add Veil/Grid/Cell.swift Veil/Nvim/MsgpackRpc.swift Veil/Nvim/NvimProcess.swift Veil/Nvim/NvimChannel.swift Veil/Grid/CellAttributes.swift Veil/Rendering/RowRenderer.swift
 git commit -m "Fix all build warnings: deprecated API, unnecessary annotations, actor isolation"
 ```
+
+---
+
+### Task 32: Login Shell Environment with Warm-Up (REVISED)
+
+**Files:**
+- Modify: `Veil/Nvim/NvimProcess.swift`
+- Modify: `Veil/AppDelegate.swift`
+
+**Problem:** Nvim needs the user's full PATH (Homebrew, nvm, mason, etc.) which isn't available in `ProcessInfo.processInfo.environment` when launched from Finder/Dock. Need to capture login shell env.
+
+**Strategy:** Simple synchronous approach with warm-up:
+1. `static let cachedEnv` captures login shell env once (lazy, thread-safe)
+2. `start()` uses `cachedEnv`
+3. AppDelegate warm-ups the cache in a background Task at app launch, so it's likely ready by the time the first window needs it
+
+**NvimProcess.swift changes:**
+
+1. `start()` should use `Self.cachedEnv` instead of `ProcessInfo.processInfo.environment`
+2. Add cached env with login shell capture:
+
+```swift
+// MARK: - Login shell environment
+//
+// When launched from Spotlight/Dock, the app inherits launchd's minimal
+// PATH which lacks Homebrew, nvm, cargo, etc. We spawn the user's login
+// shell once to capture their full environment (especially PATH), so nvim
+// and its plugins (e.g. Copilot.lua needing Node.js) can find their tools.
+// The result is cached — subsequent windows reuse it with no overhead.
+
+private static let cachedEnv: [String: String] = captureLoginShellEnvironment()
+
+/// Trigger eager loading of cachedEnv in background.
+static func warmUpEnvironment() { _ = cachedEnv }
+
+private static func captureLoginShellEnvironment() -> [String: String] {
+    let shellPath = ProcessInfo.processInfo.environment["SHELL"] ?? "/bin/zsh"
+    let process = Process()
+    process.executableURL = URL(fileURLWithPath: shellPath)
+    let marker = UUID().uuidString
+    // Login shell only (-l). Skip interactive (-i) which is usually slow.
+    // Login profile provides the correct PATH.
+    process.arguments = ["-l", "-c", "echo \(marker) && env"]
+    let pipe = Pipe()
+    process.standardOutput = pipe
+    process.standardError = FileHandle.nullDevice
+    process.currentDirectoryURL = URL(fileURLWithPath: NSHomeDirectory())
+    do {
+        try process.run()
+        process.waitUntilExit()
+    } catch {
+        return ProcessInfo.processInfo.environment
+    }
+    let data = pipe.fileHandleForReading.readDataToEndOfFile()
+    guard let output = String(data: data, encoding: .utf8),
+          let markerRange = output.range(of: marker) else {
+        return ProcessInfo.processInfo.environment
+    }
+    let envString = output[markerRange.upperBound...].trimmingCharacters(in: .whitespacesAndNewlines)
+    var env: [String: String] = [:]
+    for line in envString.split(separator: "\n") {
+        let parts = line.split(separator: "=", maxSplits: 1)
+        if parts.count == 2 { env[String(parts[0])] = String(parts[1]) }
+    }
+    return env.isEmpty ? ProcessInfo.processInfo.environment : env
+}
+```
+
+3. Remove any deferred capture code if present (beginEnvironmentCapture, notification, shellEnvObserver, applyShellEnv, etc.)
+
+**AppDelegate.swift changes:**
+
+In `applicationDidFinishLaunching`, add before `createWindow`:
+```swift
+Task.detached { NvimProcess.warmUpEnvironment() }
+```
+
+Remove `NvimProcess.beginEnvironmentCapture()` if present.
+
+**WindowDocument.swift changes:**
+
+Remove any shellEnvObserver, applyShellEnv, notification observer code if present. No env-related logic needed in WindowDocument — NvimProcess handles everything.
+
+- [ ] **Step 1: Read NvimProcess.swift, AppDelegate.swift, WindowDocument.swift**
+- [ ] **Step 2: Update NvimProcess — add cachedEnv, warmUpEnvironment, captureLoginShellEnvironment. Use cachedEnv in start(). Remove deferred code.**
+- [ ] **Step 3: Update AppDelegate — add warm-up call**
+- [ ] **Step 4: Clean up WindowDocument — remove any env observer code**
+- [ ] **Step 5: Build and verify**
+- [ ] **Step 6: Commit**
+
+```bash
+git add Veil/Nvim/NvimProcess.swift Veil/AppDelegate.swift Veil/Window/WindowDocument.swift
+git commit -m "Capture login shell env synchronously with background warm-up at app launch"
+```
