@@ -24,31 +24,40 @@ extension NvimView {
         let modifier = modifierString(event.modifierFlags)
 
         if event.hasPreciseScrollingDeltas {
-            // Trackpad: accumulate pixel deltas, send when exceeding one cell height
+            // Trackpad: accumulate pixel deltas, convert to line count
             scrollDeltaY += event.scrollingDeltaY
-            while abs(scrollDeltaY) >= cellSize.height {
-                let button = scrollDeltaY > 0 ? "wheel_up" : "wheel_down"
-                scrollDeltaY -= (scrollDeltaY > 0 ? 1 : -1) * cellSize.height
+            let lineHeight = cellSize.height
+            let lines = Int(scrollDeltaY / lineHeight)
+            if lines != 0 {
+                scrollDeltaY -= CGFloat(lines) * lineHeight
+                let action = lines > 0 ? "up" : "down"
+                let absLines = abs(lines)
                 Task {
-                    await channel?.inputMouse(button: button, action: "press", modifier: modifier, grid: 0, row: position.row, col: position.col)
+                    // Only update mousescroll when line count changes
+                    if absLines != self.lastScrollLines {
+                        self.lastScrollLines = absLines
+                        try? await channel?.command("set mousescroll=ver:\(absLines),hor:0")
+                    }
+                    await channel?.inputMouse(button: "wheel", action: action, modifier: modifier, grid: 0, row: position.row, col: position.col)
                 }
             }
         } else {
-            // Mouse wheel: discrete line-level events
+            // Mouse wheel: discrete events
             let deltaY = event.scrollingDeltaY
             let deltaX = event.scrollingDeltaX
-            if abs(deltaY) > abs(deltaX) {
-                let button = deltaY > 0 ? "wheel_up" : "wheel_down"
+            if abs(deltaY) > abs(deltaX), deltaY != 0 {
+                let action = deltaY > 0 ? "up" : "down"
                 let count = max(1, Int(abs(deltaY)))
-                for _ in 0..<count {
-                    Task {
-                        await channel?.inputMouse(button: button, action: "press", modifier: modifier, grid: 0, row: position.row, col: position.col)
-                    }
+                Task {
+                    try? await channel?.command("set mousescroll=ver:\(count),hor:0")
+                    await channel?.inputMouse(button: "wheel", action: action, modifier: modifier, grid: 0, row: position.row, col: position.col)
                 }
             } else if abs(deltaX) > 0 {
-                let button = deltaX > 0 ? "wheel_left" : "wheel_right"
+                let action = deltaX > 0 ? "left" : "right"
+                let count = max(1, Int(abs(deltaX)))
                 Task {
-                    await channel?.inputMouse(button: button, action: "press", modifier: modifier, grid: 0, row: position.row, col: position.col)
+                    try? await channel?.command("set mousescroll=ver:0,hor:\(count)")
+                    await channel?.inputMouse(button: "wheel", action: action, modifier: modifier, grid: 0, row: position.row, col: position.col)
                 }
             }
         }

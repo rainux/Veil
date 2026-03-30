@@ -20,6 +20,7 @@ final class NvimView: NSView {
     // MARK: - Scroll state
 
     var scrollDeltaY: CGFloat = 0
+    var lastScrollLines: Int = 0
 
     // MARK: - Internal (accessed by keyboard extension)
 
