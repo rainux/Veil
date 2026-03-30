@@ -5244,3 +5244,245 @@ Notes:
 git add .github/workflows/build.yml
 git commit -m "Add GitHub Actions CI for build and test"
 ```
+
+---
+
+## Metal Rendering Layer
+
+### Task 42: Metal Infrastructure — Device, Layer, Pipeline
+
+**Files:**
+- Create: `Veil/Rendering/Metal/MetalRenderer.swift`
+- Create: `Veil/Rendering/Metal/Shaders.metal`
+- Modify: `Veil/Rendering/NvimView.swift`
+
+**Goal:** Set up Metal infrastructure on NvimView — device, command queue, CAMetalLayer, shader pipeline. No rendering yet, just the foundation.
+
+**MetalRenderer.swift:**
+A class that owns all Metal state:
+```swift
+import Metal
+import QuartzCore
+
+final class MetalRenderer {
+    let device: MTLDevice
+    let commandQueue: MTLCommandQueue
+    let pipelineState: MTLRenderPipelineState
+
+    init() throws {
+        guard let device = MTLCreateSystemDefaultDevice() else {
+            throw MetalError.noDevice
+        }
+        self.device = device
+        guard let queue = device.makeCommandQueue() else {
+            throw MetalError.noCommandQueue
+        }
+        self.commandQueue = queue
+
+        // Load shaders and create pipeline
+        let library = try device.makeDefaultLibrary(bundle: Bundle.main)
+        let vertexFunction = library.makeFunction(name: "vertexShader")
+        let fragmentFunction = library.makeFunction(name: "fragmentShader")
+
+        let descriptor = MTLRenderPipelineDescriptor()
+        descriptor.vertexFunction = vertexFunction
+        descriptor.fragmentFunction = fragmentFunction
+        descriptor.colorAttachments[0].pixelFormat = .bgra8Unorm
+        // Enable alpha blending for cursor overlay
+        descriptor.colorAttachments[0].isBlendingEnabled = true
+        descriptor.colorAttachments[0].sourceRGBBlendFactor = .sourceAlpha
+        descriptor.colorAttachments[0].destinationRGBBlendFactor = .oneMinusSourceAlpha
+
+        self.pipelineState = try device.makeRenderPipelineState(descriptor: descriptor)
+    }
+}
+
+enum MetalError: Error {
+    case noDevice
+    case noCommandQueue
+}
+```
+
+**Shaders.metal:**
+Basic vertex/fragment shaders for textured quads:
+```metal
+#include <metal_stdlib>
+using namespace metal;
+
+struct VertexIn {
+    float2 position [[attribute(0)]];
+    float2 texCoord [[attribute(1)]];
+    float4 bgColor  [[attribute(2)]];
+};
+
+struct VertexOut {
+    float4 position [[position]];
+    float2 texCoord;
+    float4 bgColor;
+};
+
+struct Uniforms {
+    float2 viewportSize;
+};
+
+vertex VertexOut vertexShader(VertexIn in [[stage_in]],
+                              constant Uniforms &uniforms [[buffer(1)]]) {
+    VertexOut out;
+    // Convert pixel coordinates to clip space (-1 to 1)
+    float2 clipPos = (in.position / uniforms.viewportSize) * 2.0 - 1.0;
+    clipPos.y = -clipPos.y; // Flip Y (Metal is bottom-up, we want top-down)
+    out.position = float4(clipPos, 0.0, 1.0);
+    out.texCoord = in.texCoord;
+    out.bgColor = in.bgColor;
+    return out;
+}
+
+fragment float4 fragmentShader(VertexOut in [[stage_in]],
+                                texture2d<float> atlas [[texture(0)]]) {
+    constexpr sampler texSampler(mag_filter::nearest, min_filter::nearest);
+    float4 texColor = atlas.sample(texSampler, in.texCoord);
+    // Blend glyph over background: if glyph pixel has alpha, use it; otherwise use bgColor
+    return mix(in.bgColor, texColor, texColor.a);
+}
+```
+
+**NvimView.swift changes:**
+- Add a `CAMetalLayer` to the view (alongside existing row layers for now — incremental migration)
+- Initialize `MetalRenderer` in `setupLayers()`
+- The actual rendering switch happens in Task 44
+
+- [ ] **Step 1: Create Metal/ directory and files**
+- [ ] **Step 2: Implement MetalRenderer with device, queue, pipeline**
+- [ ] **Step 3: Write basic shaders**
+- [ ] **Step 4: Add CAMetalLayer to NvimView (hidden for now)**
+- [ ] **Step 5: Build and verify (Metal compiles but isn't used yet)**
+- [ ] **Step 6: Commit**
+
+```bash
+git add Veil/Rendering/Metal/
+git commit -m "Add Metal infrastructure: device, pipeline, shaders"
+```
+
+---
+
+### Task 43: Glyph Atlas — Texture-Based Glyph Cache
+
+**Files:**
+- Create: `Veil/Rendering/Metal/GlyphAtlas.swift`
+
+**Goal:** Replace per-cell CGImage caching with a single large Metal texture containing all rendered glyphs. Each glyph gets a rectangular region in the atlas, and we track UV coordinates for lookup.
+
+**GlyphAtlas.swift:**
+```swift
+final class GlyphAtlas {
+    struct GlyphRegion {
+        let u: Float, v: Float      // top-left UV in atlas
+        let uMax: Float, vMax: Float // bottom-right UV
+        let width: Float, height: Float // size in points
+    }
+
+    private let device: MTLDevice
+    private(set) var texture: MTLTexture
+    private var regions: [GlyphCache.Key: GlyphRegion] = [:]
+    private var nextX: Int = 0
+    private var nextY: Int = 0
+    private var rowHeight: Int = 0
+    private let atlasSize: Int  // e.g. 2048x2048
+
+    init(device: MTLDevice, size: Int = 2048) throws { ... }
+
+    func region(for key: GlyphCache.Key, cellSize: CGSize, font: NSFont,
+                bold: Bool, italic: Bool, fg: Int, bg: Int) -> GlyphRegion { ... }
+
+    func invalidate() { ... }
+}
+```
+
+Key design:
+- Atlas is a single `MTLTexture` (2048x2048 initially, grows if needed)
+- On cache miss: render glyph with CoreText to a CGContext, copy pixels to atlas texture region
+- Track occupied regions with simple row-based packing (next-fit on current row, move to next row when full)
+- `invalidate()` clears all regions (called on font change)
+- Returns UV coordinates for each glyph, used by the vertex buffer
+
+- [ ] **Step 1: Implement GlyphAtlas with texture allocation and CoreText rendering**
+- [ ] **Step 2: Implement region lookup and packing**
+- [ ] **Step 3: Build and verify**
+- [ ] **Step 4: Commit**
+
+```bash
+git add Veil/Rendering/Metal/GlyphAtlas.swift
+git commit -m "Add GlyphAtlas: texture-based glyph cache for Metal rendering"
+```
+
+---
+
+### Task 44: Metal Grid Rendering — Replace CALayer Pipeline
+
+**Files:**
+- Modify: `Veil/Rendering/Metal/MetalRenderer.swift` (add render method)
+- Modify: `Veil/Rendering/NvimView.swift` (switch to Metal rendering)
+
+**Goal:** Build vertex buffer from grid cells, render entire grid in one Metal draw call. Remove old CALayer row rendering.
+
+**MetalRenderer additions:**
+```swift
+func render(grid: Grid, atlas: GlyphAtlas, cellSize: CGSize, gridTopPadding: CGFloat,
+            defaultFg: Int, defaultBg: Int,
+            cursorPosition: Position, cursorShape: ModeInfo.CursorShape,
+            cursorCellPercentage: Int,
+            in metalLayer: CAMetalLayer) { ... }
+```
+
+This method:
+1. Gets a drawable from metalLayer
+2. Builds vertex buffer: for each cell in the grid, create a textured quad with:
+   - Position from (row, col) * cellSize + gridTopPadding offset
+   - UV coordinates from GlyphAtlas lookup
+   - Background color from cell attributes
+3. Draws cursor as a separate colored quad overlay
+4. Submits command buffer and presents
+
+**NvimView changes:**
+- Replace `render(grid:)` implementation: instead of iterating dirty rows and updating CALayers, call `metalRenderer.render()`
+- Remove `rowLayers` array and related layer management
+- Keep `cursorLayer` for now (or render cursor in Metal too)
+- The `metalLayer` becomes the primary rendering surface
+
+**Optimization:**
+- Only rebuild vertex buffer when grid changes (dirty rows)
+- Cache the vertex buffer between frames
+- On scroll: rebuild affected rows only
+
+- [ ] **Step 1: Implement render method in MetalRenderer**
+- [ ] **Step 2: Switch NvimView to use Metal rendering**
+- [ ] **Step 3: Remove old CALayer row rendering code**
+- [ ] **Step 4: Build, run, verify rendering is correct**
+- [ ] **Step 5: Commit**
+
+```bash
+git add Veil/Rendering/Metal/ Veil/Rendering/NvimView.swift
+git commit -m "Switch to Metal rendering: one draw call for entire grid"
+```
+
+---
+
+### Task 45: Clean Up — Remove Old Rendering Code
+
+**Files:**
+- Delete or archive: `Veil/Rendering/RowRenderer.swift`
+- Modify: `Veil/Rendering/GlyphCache.swift` (keep for marked text, or migrate)
+- Modify: `Veil/Rendering/NvimView.swift` (remove old rendering references)
+
+**Goal:** Remove the CoreText→CGImage→CALayer pipeline code that Metal replaced. Keep GlyphCache only if still needed for marked text rendering.
+
+- [ ] **Step 1: Remove RowRenderer**
+- [ ] **Step 2: Clean up NvimView**
+- [ ] **Step 3: Build and verify**
+- [ ] **Step 4: Run tests**
+- [ ] **Step 5: Commit**
+
+```bash
+git add -u Veil/Rendering/
+git commit -m "Remove old CoreText row rendering pipeline, replaced by Metal"
+```
