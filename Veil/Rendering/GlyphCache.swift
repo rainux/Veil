@@ -118,10 +118,12 @@ nonisolated final class GlyphCache: @unchecked Sendable {
         let attrString = NSAttributedString(string: text, attributes: attributes)
         let line = CTLineCreateWithAttributedString(attrString)
 
-        // Position baseline
+        // Position baseline (centered in the potentially taller cell)
         let descent = CTFontGetDescent(drawFont)
         let leading = CTFontGetLeading(drawFont)
-        let baselineY = descent + leading
+        let naturalHeight = CTFontGetAscent(drawFont) + descent + leading
+        let extraPadding = (cellSize.height - naturalHeight) / 2
+        let baselineY = descent + leading + extraPadding
 
         ctx.textPosition = CGPoint(x: 0, y: baselineY)
         CTLineDraw(line, ctx)

@@ -202,11 +202,13 @@ final class NvimView: NSView {
         rowRenderer.updateCellSize(newCellSize)
     }
 
+    private static let lineHeightMultiplier: CGFloat = 1.2
+
     private static func computeCellSize(for font: NSFont) -> CGSize {
         let glyph = font.glyph(withName: "M")
         let advancement = font.advancement(forGlyph: glyph)
         let width = advancement.width > 0 ? advancement.width : font.pointSize * 0.6
-        let height = ceil(CTFontGetAscent(font) + CTFontGetDescent(font) + CTFontGetLeading(font))
+        let height = ceil((CTFontGetAscent(font) + CTFontGetDescent(font) + CTFontGetLeading(font)) * lineHeightMultiplier)
         return CGSize(width: ceil(width), height: height)
     }
 
