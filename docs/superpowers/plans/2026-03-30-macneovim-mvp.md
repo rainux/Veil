@@ -5194,3 +5194,53 @@ Then use it like nvim:
 git add Veil/Nvim/NvimProcess.swift Veil/Nvim/NvimChannel.swift Veil/Window/WindowDocument.swift Veil/AppDelegate.swift Veil/bin/veil README.md Veil.xcodeproj/project.pbxproj
 git commit -m "Add veil CLI launcher with argument passthrough to nvim"
 ```
+
+---
+
+### Task 41: GitHub Actions CI Build
+
+**Files:**
+- Create: `.github/workflows/build.yml`
+
+**Problem:** Need automated CI to build and test on every push/PR.
+
+**Fix:** Create a GitHub Actions workflow that:
+1. Checks out the code
+2. Builds the Veil scheme with xcodebuild
+3. Runs unit tests (VeilTests)
+
+```yaml
+name: Build
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+
+jobs:
+  build:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build
+        run: xcodebuild build -project Veil.xcodeproj -scheme Veil -destination 'platform=macOS' | tail -5
+
+      - name: Test
+        run: xcodebuild test -project Veil.xcodeproj -scheme Veil -destination 'platform=macOS' -only-testing:VeilTests | tail -20
+```
+
+Notes:
+- Use `macos-15` runner (latest available with Xcode 16+)
+- Skip UI tests (`-only-testing:VeilTests`) — they need a display
+- The project uses Swift 6 features and `SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor`, so needs a recent Xcode
+- May need `xcode-select` to pick the right Xcode version
+
+- [ ] **Step 1: Create `.github/workflows/build.yml`**
+- [ ] **Step 2: Commit**
+
+```bash
+git add .github/workflows/build.yml
+git commit -m "Add GitHub Actions CI for build and test"
+```
