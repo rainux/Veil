@@ -95,17 +95,17 @@ actor MsgpackRpc {
             }
             data = Data(remainder)
             guard let array = value.arrayValue, array.count >= 3 else { continue }
-            guard let type = array[0].unsignedIntegerValue else { continue }
+            guard let type = array[0].uint64Value else { continue }
 
             switch type {
             case 0: // request
                 guard array.count >= 4,
-                      let msgid = array[1].unsignedIntegerValue,
+                      let msgid = array[1].uint64Value,
                       let method = array[2].stringValue else { continue }
                 messages.append(.request(msgid: UInt32(msgid), method: method, params: array[3]))
             case 1: // response
                 guard array.count >= 4,
-                      let msgid = array[1].unsignedIntegerValue else { continue }
+                      let msgid = array[1].uint64Value else { continue }
                 messages.append(.response(msgid: UInt32(msgid), error: array[2], result: array[3]))
             case 2: // notification
                 guard let method = array[1].stringValue else { continue }

@@ -1,7 +1,7 @@
 import AppKit
 import CoreText
 
-private let defaultAttrs = CellAttributes()
+nonisolated private let defaultAttrs = CellAttributes()
 
 nonisolated final class RowRenderer: @unchecked Sendable {
     private var cellSize: CGSize

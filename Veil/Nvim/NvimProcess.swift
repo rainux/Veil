@@ -1,9 +1,9 @@
 import Foundation
 
-final class NvimProcess: @unchecked Sendable {
-    nonisolated(unsafe) let stdinPipe = Pipe()
-    nonisolated(unsafe) let stdoutPipe = Pipe()
-    nonisolated(unsafe) let stderrPipe = Pipe()
+nonisolated final class NvimProcess: @unchecked Sendable {
+    let stdinPipe = Pipe()
+    let stdoutPipe = Pipe()
+    let stderrPipe = Pipe()
 
     private nonisolated(unsafe) var _process: Process?
     private let _processLock = NSLock()

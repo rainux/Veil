@@ -49,7 +49,7 @@ actor NvimChannel {
                 }
                 await group.waitForAll()
             }
-            await self.finishEvents()
+            self.finishEvents()
         }
     }
 

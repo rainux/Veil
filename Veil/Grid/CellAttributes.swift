@@ -16,7 +16,7 @@ struct CellAttributes: Equatable, Sendable {
     var reverse: Bool
     var blend: Int
 
-    init(
+    nonisolated init(
         foreground: Int = -1,
         background: Int = -1,
         special: Int = -1,
