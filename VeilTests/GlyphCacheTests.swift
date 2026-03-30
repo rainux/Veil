@@ -1,5 +1,5 @@
 import XCTest
-@testable import MacNeovim
+@testable import Veil
 
 final class GlyphCacheTests: XCTestCase {
     private var cache: GlyphCache!

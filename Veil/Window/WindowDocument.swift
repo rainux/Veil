@@ -36,7 +36,7 @@ class WindowDocument: NSDocument {
     }
 
     override var displayName: String! {
-        get { "MacNeovim" }
+        get { "Veil" }
         set { }
     }
 

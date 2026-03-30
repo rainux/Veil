@@ -11,9 +11,9 @@ class WindowController: NSWindowController, NSWindowDelegate {
             styleMask: [.titled, .closable, .miniaturizable, .resizable, .fullSizeContentView],
             backing: .buffered, defer: false
         )
-        window.title = "MacNeovim"
+        window.title = "Veil"
         window.center()
-        if let frameString = UserDefaults.standard.string(forKey: "MacNeovimWindowFrame") {
+        if let frameString = UserDefaults.standard.string(forKey: "VeilWindowFrame") {
             window.setFrame(NSRectFromString(frameString), display: false)
         }
         window.isReleasedWhenClosed = false
@@ -25,7 +25,7 @@ class WindowController: NSWindowController, NSWindowDelegate {
         self.init(window: window)
         window.delegate = self
 
-        let titleLabel = NSTextField(labelWithString: "MacNeovim")
+        let titleLabel = NSTextField(labelWithString: "Veil")
         titleLabel.translatesAutoresizingMaskIntoConstraints = false
         titleLabel.font = .titleBarFont(ofSize: 0)
         titleLabel.textColor = .labelColor
@@ -75,6 +75,6 @@ class WindowController: NSWindowController, NSWindowDelegate {
 
     private func saveWindowFrame() {
         guard let frame = window?.frame else { return }
-        UserDefaults.standard.set(NSStringFromRect(frame), forKey: "MacNeovimWindowFrame")
+        UserDefaults.standard.set(NSStringFromRect(frame), forKey: "VeilWindowFrame")
     }
 }

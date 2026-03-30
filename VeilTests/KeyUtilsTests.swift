@@ -1,6 +1,6 @@
 import XCTest
 import Carbon.HIToolbox
-@testable import MacNeovim
+@testable import Veil
 
 final class KeyUtilsTests: XCTestCase {
     func testPlainCharacter() {

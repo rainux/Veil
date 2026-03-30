@@ -1,13 +1,13 @@
 //
-//  MacNeovimUITestsLaunchTests.swift
-//  MacNeovimUITests
+//  VeilUITestsLaunchTests.swift
+//  VeilUITests
 //
 //  Created by Rainux Luo on 2026/3/30.
 //
 
 import XCTest
 
-final class MacNeovimUITestsLaunchTests: XCTestCase {
+final class VeilUITestsLaunchTests: XCTestCase {
 
     override class var runsForEachTargetApplicationUIConfiguration: Bool {
         true

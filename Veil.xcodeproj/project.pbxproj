@@ -17,37 +17,37 @@
 			containerPortal = D8BEFDE62F7999A900CDE7C3 /* Project object */;
 			proxyType = 1;
 			remoteGlobalIDString = D8BEFDED2F7999A900CDE7C3;
-			remoteInfo = MacNeovim;
+			remoteInfo = Veil;
 		};
 		D8BEFE072F7999AA00CDE7C3 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = D8BEFDE62F7999A900CDE7C3 /* Project object */;
 			proxyType = 1;
 			remoteGlobalIDString = D8BEFDED2F7999A900CDE7C3;
-			remoteInfo = MacNeovim;
+			remoteInfo = Veil;
 		};
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
-		D8BEFDEE2F7999A900CDE7C3 /* MacNeovim.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = MacNeovim.app; sourceTree = BUILT_PRODUCTS_DIR; };
-		D8BEFDFC2F7999AA00CDE7C3 /* MacNeovimTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = MacNeovimTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
-		D8BEFE062F7999AA00CDE7C3 /* MacNeovimUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = MacNeovimUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		D8BEFDEE2F7999A900CDE7C3 /* Veil.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Veil.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		D8BEFDFC2F7999AA00CDE7C3 /* VeilTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = VeilTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		D8BEFE062F7999AA00CDE7C3 /* VeilUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = VeilUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
-		D8BEFDF02F7999A900CDE7C3 /* MacNeovim */ = {
+		D8BEFDF02F7999A900CDE7C3 /* Veil */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			path = MacNeovim;
+			path = Veil;
 			sourceTree = "<group>";
 		};
-		D8BEFDFF2F7999AA00CDE7C3 /* MacNeovimTests */ = {
+		D8BEFDFF2F7999AA00CDE7C3 /* VeilTests */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			path = MacNeovimTests;
+			path = VeilTests;
 			sourceTree = "<group>";
 		};
-		D8BEFE092F7999AA00CDE7C3 /* MacNeovimUITests */ = {
+		D8BEFE092F7999AA00CDE7C3 /* VeilUITests */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			path = MacNeovimUITests;
+			path = VeilUITests;
 			sourceTree = "<group>";
 		};
 /* End PBXFileSystemSynchronizedRootGroup section */
@@ -82,9 +82,9 @@
 		D8BEFDE52F7999A900CDE7C3 = {
 			isa = PBXGroup;
 			children = (
-				D8BEFDF02F7999A900CDE7C3 /* MacNeovim */,
-				D8BEFDFF2F7999AA00CDE7C3 /* MacNeovimTests */,
-				D8BEFE092F7999AA00CDE7C3 /* MacNeovimUITests */,
+				D8BEFDF02F7999A900CDE7C3 /* Veil */,
+				D8BEFDFF2F7999AA00CDE7C3 /* VeilTests */,
+				D8BEFE092F7999AA00CDE7C3 /* VeilUITests */,
 				D8BEFDEF2F7999A900CDE7C3 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -92,9 +92,9 @@
 		D8BEFDEF2F7999A900CDE7C3 /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				D8BEFDEE2F7999A900CDE7C3 /* MacNeovim.app */,
-				D8BEFDFC2F7999AA00CDE7C3 /* MacNeovimTests.xctest */,
-				D8BEFE062F7999AA00CDE7C3 /* MacNeovimUITests.xctest */,
+				D8BEFDEE2F7999A900CDE7C3 /* Veil.app */,
+				D8BEFDFC2F7999AA00CDE7C3 /* VeilTests.xctest */,
+				D8BEFE062F7999AA00CDE7C3 /* VeilUITests.xctest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -102,9 +102,9 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
-		D8BEFDED2F7999A900CDE7C3 /* MacNeovim */ = {
+		D8BEFDED2F7999A900CDE7C3 /* Veil */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = D8BEFE102F7999AA00CDE7C3 /* Build configuration list for PBXNativeTarget "MacNeovim" */;
+			buildConfigurationList = D8BEFE102F7999AA00CDE7C3 /* Build configuration list for PBXNativeTarget "Veil" */;
 			buildPhases = (
 				D8BEFDEA2F7999A900CDE7C3 /* Sources */,
 				D8BEFDEB2F7999A900CDE7C3 /* Frameworks */,
@@ -115,19 +115,19 @@
 			dependencies = (
 			);
 			fileSystemSynchronizedGroups = (
-				D8BEFDF02F7999A900CDE7C3 /* MacNeovim */,
+				D8BEFDF02F7999A900CDE7C3 /* Veil */,
 			);
-			name = MacNeovim;
+			name = Veil;
 			packageProductDependencies = (
 				E1000002AAAAAA0000000001 /* MessagePack */,
 			);
-			productName = MacNeovim;
-			productReference = D8BEFDEE2F7999A900CDE7C3 /* MacNeovim.app */;
+			productName = Veil;
+			productReference = D8BEFDEE2F7999A900CDE7C3 /* Veil.app */;
 			productType = "com.apple.product-type.application";
 		};
-		D8BEFDFB2F7999AA00CDE7C3 /* MacNeovimTests */ = {
+		D8BEFDFB2F7999AA00CDE7C3 /* VeilTests */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = D8BEFE132F7999AA00CDE7C3 /* Build configuration list for PBXNativeTarget "MacNeovimTests" */;
+			buildConfigurationList = D8BEFE132F7999AA00CDE7C3 /* Build configuration list for PBXNativeTarget "VeilTests" */;
 			buildPhases = (
 				D8BEFDF82F7999AA00CDE7C3 /* Sources */,
 				D8BEFDF92F7999AA00CDE7C3 /* Frameworks */,
@@ -139,19 +139,19 @@
 				D8BEFDFE2F7999AA00CDE7C3 /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
-				D8BEFDFF2F7999AA00CDE7C3 /* MacNeovimTests */,
+				D8BEFDFF2F7999AA00CDE7C3 /* VeilTests */,
 			);
-			name = MacNeovimTests;
+			name = VeilTests;
 			packageProductDependencies = (
 				E1000003AAAAAA0000000001 /* MessagePack */,
 			);
-			productName = MacNeovimTests;
-			productReference = D8BEFDFC2F7999AA00CDE7C3 /* MacNeovimTests.xctest */;
+			productName = VeilTests;
+			productReference = D8BEFDFC2F7999AA00CDE7C3 /* VeilTests.xctest */;
 			productType = "com.apple.product-type.bundle.unit-test";
 		};
-		D8BEFE052F7999AA00CDE7C3 /* MacNeovimUITests */ = {
+		D8BEFE052F7999AA00CDE7C3 /* VeilUITests */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = D8BEFE162F7999AA00CDE7C3 /* Build configuration list for PBXNativeTarget "MacNeovimUITests" */;
+			buildConfigurationList = D8BEFE162F7999AA00CDE7C3 /* Build configuration list for PBXNativeTarget "VeilUITests" */;
 			buildPhases = (
 				D8BEFE022F7999AA00CDE7C3 /* Sources */,
 				D8BEFE032F7999AA00CDE7C3 /* Frameworks */,
@@ -163,13 +163,13 @@
 				D8BEFE082F7999AA00CDE7C3 /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
-				D8BEFE092F7999AA00CDE7C3 /* MacNeovimUITests */,
+				D8BEFE092F7999AA00CDE7C3 /* VeilUITests */,
 			);
-			name = MacNeovimUITests;
+			name = VeilUITests;
 			packageProductDependencies = (
 			);
-			productName = MacNeovimUITests;
-			productReference = D8BEFE062F7999AA00CDE7C3 /* MacNeovimUITests.xctest */;
+			productName = VeilUITests;
+			productReference = D8BEFE062F7999AA00CDE7C3 /* VeilUITests.xctest */;
 			productType = "com.apple.product-type.bundle.ui-testing";
 		};
 /* End PBXNativeTarget section */
@@ -195,7 +195,7 @@
 					};
 				};
 			};
-			buildConfigurationList = D8BEFDE92F7999A900CDE7C3 /* Build configuration list for PBXProject "MacNeovim" */;
+			buildConfigurationList = D8BEFDE92F7999A900CDE7C3 /* Build configuration list for PBXProject "Veil" */;
 			developmentRegion = en;
 			hasScannedForEncodings = 0;
 			knownRegions = (
@@ -212,9 +212,9 @@
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
-				D8BEFDED2F7999A900CDE7C3 /* MacNeovim */,
-				D8BEFDFB2F7999AA00CDE7C3 /* MacNeovimTests */,
-				D8BEFE052F7999AA00CDE7C3 /* MacNeovimUITests */,
+				D8BEFDED2F7999A900CDE7C3 /* Veil */,
+				D8BEFDFB2F7999AA00CDE7C3 /* VeilTests */,
+				D8BEFE052F7999AA00CDE7C3 /* VeilUITests */,
 			);
 		};
 /* End PBXProject section */
@@ -270,12 +270,12 @@
 /* Begin PBXTargetDependency section */
 		D8BEFDFE2F7999AA00CDE7C3 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
-			target = D8BEFDED2F7999A900CDE7C3 /* MacNeovim */;
+			target = D8BEFDED2F7999A900CDE7C3 /* Veil */;
 			targetProxy = D8BEFDFD2F7999AA00CDE7C3 /* PBXContainerItemProxy */;
 		};
 		D8BEFE082F7999AA00CDE7C3 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
-			target = D8BEFDED2F7999A900CDE7C3 /* MacNeovim */;
+			target = D8BEFDED2F7999A900CDE7C3 /* Veil */;
 			targetProxy = D8BEFE072F7999AA00CDE7C3 /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
@@ -422,7 +422,7 @@
 					"@executable_path/../Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = org.1b2c.MacNeovim;
+				PRODUCT_BUNDLE_IDENTIFIER = org.1b2c.Veil;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				REGISTER_APP_GROUPS = YES;
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
@@ -455,7 +455,7 @@
 					"@executable_path/../Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = org.1b2c.MacNeovim;
+				PRODUCT_BUNDLE_IDENTIFIER = org.1b2c.Veil;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				REGISTER_APP_GROUPS = YES;
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
@@ -477,14 +477,14 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				MACOSX_DEPLOYMENT_TARGET = 26.2;
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = org.1b2c.MacNeovimTests;
+				PRODUCT_BUNDLE_IDENTIFIER = org.1b2c.VeilTests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = NO;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
 				SWIFT_EMIT_LOC_STRINGS = NO;
 				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
 				SWIFT_VERSION = 5.0;
-				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/MacNeovim.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/MacNeovim";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Veil.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Veil";
 			};
 			name = Debug;
 		};
@@ -498,14 +498,14 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				MACOSX_DEPLOYMENT_TARGET = 26.2;
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = org.1b2c.MacNeovimTests;
+				PRODUCT_BUNDLE_IDENTIFIER = org.1b2c.VeilTests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = NO;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
 				SWIFT_EMIT_LOC_STRINGS = NO;
 				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
 				SWIFT_VERSION = 5.0;
-				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/MacNeovim.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/MacNeovim";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Veil.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Veil";
 			};
 			name = Release;
 		};
@@ -517,14 +517,14 @@
 				DEVELOPMENT_TEAM = SAU5W824JN;
 				GENERATE_INFOPLIST_FILE = YES;
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = org.1b2c.MacNeovimUITests;
+				PRODUCT_BUNDLE_IDENTIFIER = org.1b2c.VeilUITests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = NO;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
 				SWIFT_EMIT_LOC_STRINGS = NO;
 				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
 				SWIFT_VERSION = 5.0;
-				TEST_TARGET_NAME = MacNeovim;
+				TEST_TARGET_NAME = Veil;
 			};
 			name = Debug;
 		};
@@ -536,21 +536,21 @@
 				DEVELOPMENT_TEAM = SAU5W824JN;
 				GENERATE_INFOPLIST_FILE = YES;
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = org.1b2c.MacNeovimUITests;
+				PRODUCT_BUNDLE_IDENTIFIER = org.1b2c.VeilUITests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = NO;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
 				SWIFT_EMIT_LOC_STRINGS = NO;
 				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
 				SWIFT_VERSION = 5.0;
-				TEST_TARGET_NAME = MacNeovim;
+				TEST_TARGET_NAME = Veil;
 			};
 			name = Release;
 		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
-		D8BEFDE92F7999A900CDE7C3 /* Build configuration list for PBXProject "MacNeovim" */ = {
+		D8BEFDE92F7999A900CDE7C3 /* Build configuration list for PBXProject "Veil" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				D8BEFE0E2F7999AA00CDE7C3 /* Debug */,
@@ -559,7 +559,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		D8BEFE102F7999AA00CDE7C3 /* Build configuration list for PBXNativeTarget "MacNeovim" */ = {
+		D8BEFE102F7999AA00CDE7C3 /* Build configuration list for PBXNativeTarget "Veil" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				D8BEFE112F7999AA00CDE7C3 /* Debug */,
@@ -568,7 +568,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		D8BEFE132F7999AA00CDE7C3 /* Build configuration list for PBXNativeTarget "MacNeovimTests" */ = {
+		D8BEFE132F7999AA00CDE7C3 /* Build configuration list for PBXNativeTarget "VeilTests" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				D8BEFE142F7999AA00CDE7C3 /* Debug */,
@@ -577,7 +577,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		D8BEFE162F7999AA00CDE7C3 /* Build configuration list for PBXNativeTarget "MacNeovimUITests" */ = {
+		D8BEFE162F7999AA00CDE7C3 /* Build configuration list for PBXNativeTarget "VeilUITests" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				D8BEFE172F7999AA00CDE7C3 /* Debug */,

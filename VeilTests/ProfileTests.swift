@@ -1,5 +1,5 @@
 import Testing
-@testable import MacNeovim
+@testable import Veil
 
 struct ProfileTests {
 

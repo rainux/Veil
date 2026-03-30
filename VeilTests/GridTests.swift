@@ -1,7 +1,7 @@
 import Foundation
 import Testing
 import MessagePack
-@testable import MacNeovim
+@testable import Veil
 
 @MainActor
 final class GridTests {

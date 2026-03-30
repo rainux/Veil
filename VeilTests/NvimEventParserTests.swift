@@ -1,6 +1,6 @@
 import XCTest
 import MessagePack
-@testable import MacNeovim
+@testable import Veil
 
 final class NvimEventParserTests: XCTestCase {
 

@@ -1,6 +1,6 @@
 import Testing
 import MessagePack
-@testable import MacNeovim
+@testable import Veil
 
 @MainActor
 struct CellAttributesTests {
