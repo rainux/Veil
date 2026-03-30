@@ -39,7 +39,7 @@ nonisolated final class NvimProcess: @unchecked Sendable {
         process.qualityOfService = .userInteractive
         let binary = resolveNvimBinary()
         process.executableURL = URL(fileURLWithPath: binary)
-        var env = ProcessInfo.processInfo.environment
+        var env = Self.cachedEnv
         env["NVIM_APPNAME"] = appName
         env.merge(additionalEnv) { _, new in new }
         process.environment = env
@@ -62,6 +62,51 @@ nonisolated final class NvimProcess: @unchecked Sendable {
         DispatchQueue.global().asyncAfter(deadline: .now() + 2) {
             if process.isRunning { process.terminate() }
         }
+    }
+
+    // MARK: - Login shell environment
+    //
+    // When launched from Spotlight/Dock, the app inherits launchd's minimal
+    // PATH which lacks Homebrew, nvm, cargo, etc. We spawn the user's login
+    // shell once to capture their full environment (especially PATH), so nvim
+    // and its plugins (e.g. Copilot.lua needing Node.js) can find their tools.
+    // The result is cached — subsequent windows reuse it with no overhead.
+
+    private static let cachedEnv: [String: String] = captureLoginShellEnvironment()
+
+    /// Trigger eager loading of cachedEnv in background.
+    static func warmUpEnvironment() { _ = cachedEnv }
+
+    private static func captureLoginShellEnvironment() -> [String: String] {
+        let shellPath = ProcessInfo.processInfo.environment["SHELL"] ?? "/bin/zsh"
+        let process = Process()
+        process.executableURL = URL(fileURLWithPath: shellPath)
+        let marker = UUID().uuidString
+        // Login shell only (-l). Skip interactive (-i) which is usually slow.
+        // Login profile provides the correct PATH.
+        process.arguments = ["-l", "-c", "echo \(marker) && env"]
+        let pipe = Pipe()
+        process.standardOutput = pipe
+        process.standardError = FileHandle.nullDevice
+        process.currentDirectoryURL = URL(fileURLWithPath: NSHomeDirectory())
+        do {
+            try process.run()
+            process.waitUntilExit()
+        } catch {
+            return ProcessInfo.processInfo.environment
+        }
+        let data = pipe.fileHandleForReading.readDataToEndOfFile()
+        guard let output = String(data: data, encoding: .utf8),
+              let markerRange = output.range(of: marker) else {
+            return ProcessInfo.processInfo.environment
+        }
+        let envString = output[markerRange.upperBound...].trimmingCharacters(in: .whitespacesAndNewlines)
+        var env: [String: String] = [:]
+        for line in envString.split(separator: "\n") {
+            let parts = line.split(separator: "=", maxSplits: 1)
+            if parts.count == 2 { env[String(parts[0])] = String(parts[1]) }
+        }
+        return env.isEmpty ? ProcessInfo.processInfo.environment : env
     }
 
     // MARK: - Binary resolution

@@ -3,6 +3,7 @@ import Cocoa
 @main
 class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationDidFinishLaunching(_ aNotification: Notification) {
+        Task.detached { NvimProcess.warmUpEnvironment() }
         addProfilePickerMenuItem()
         createWindow(profile: Profile.default)
     }
