@@ -22,13 +22,14 @@ Veil uses your system-installed neovim. No bundled binary — you always get the
 
 ## Build
 
-Open `Veil.xcodeproj` in Xcode and run, or use the build script:
+Open `Veil.xcodeproj` in Xcode and run, or:
 
 ```
-bin/build                    # Release build
-bin/build --install          # Release build + install to /Applications
-bin/build --debug            # Debug build
-bin/build --clean --install  # Clean, build, install
+make                # Release build
+make debug          # Debug build
+make test           # Run unit tests
+make install        # Release build + install to /Applications
+make clean          # Clean build artifacts
 ```
 
 ## Usage
