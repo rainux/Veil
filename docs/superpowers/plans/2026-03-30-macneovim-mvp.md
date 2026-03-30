@@ -5247,6 +5247,130 @@ git commit -m "Add GitHub Actions CI for build and test"
 
 ---
 
+### Task 42b: Cmd+Q Must Confirm Unsaved Buffers
+
+**Files:**
+- Modify: `Veil/AppDelegate.swift`
+
+**Problem:** `applicationShouldTerminate` returns `.terminateNow` which immediately kills the app, potentially losing unsaved buffer data. Need to let neovim handle confirmation via `:confirm qa`.
+
+**Strategy:**
+1. `applicationShouldTerminate` sets an `isQuitting` flag, sends `:confirm qa` to every open window's nvim, returns `.terminateCancel`
+2. Each nvim either quits (user confirms / no dirty buffers) or stays (user cancels)
+3. When a nvim quits, its event stream ends → `close()` is called → window closes
+4. After sending `:confirm qa` to all windows, check periodically: if all documents are closed and `isQuitting`, call `NSApp.terminate(nil)` again — this time with no documents, it terminates immediately
+5. If any window survives (user cancelled in nvim), reset `isQuitting`
+
+**Implementation:**
+
+```swift
+private var isQuitting = false
+
+func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
+    let documents = NSDocumentController.shared.documents.compactMap { $0 as? WindowDocument }
+    if documents.isEmpty { return .terminateNow }
+
+    isQuitting = true
+    for doc in documents {
+        Task { @MainActor in
+            try? await doc.channel.command("confirm qa")
+        }
+    }
+
+    // Check after a delay if all windows closed
+    Task { @MainActor in
+        // Give nvim time to process and user time to respond
+        try? await Task.sleep(for: .seconds(0.5))
+        self.checkQuitProgress()
+    }
+
+    return .terminateCancel
+}
+
+private func checkQuitProgress() {
+    guard isQuitting else { return }
+    let documents = NSDocumentController.shared.documents
+    if documents.isEmpty {
+        NSApp.terminate(nil)
+    } else {
+        // Some windows still open — user may have cancelled.
+        // Keep checking for a bit, then give up.
+        Task { @MainActor in
+            try? await Task.sleep(for: .seconds(1))
+            if isQuitting && NSDocumentController.shared.documents.isEmpty {
+                NSApp.terminate(nil)
+            } else {
+                isQuitting = false
+            }
+        }
+    }
+}
+```
+
+Wait — this polling approach is fragile. Better: observe when documents close. Override or hook into WindowDocument.close() to notify AppDelegate.
+
+Simpler approach: in WindowDocument.close(), check if AppDelegate.isQuitting and no other documents remain, then terminate.
+
+**Revised implementation:**
+
+AppDelegate:
+```swift
+var isQuitting = false
+
+func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
+    let documents = NSDocumentController.shared.documents.compactMap { $0 as? WindowDocument }
+    if documents.isEmpty { return .terminateNow }
+
+    isQuitting = true
+    for doc in documents {
+        Task { @MainActor in
+            try? await doc.channel.command("confirm qa")
+        }
+    }
+    return .terminateCancel
+}
+```
+
+WindowDocument — in `close()`, after `super.close()`:
+```swift
+override func close() {
+    eventLoopTask?.cancel()
+    Task { await channel.stop() }
+    super.close()
+
+    // If app is quitting and this was the last window, finish termination
+    if let appDelegate = NSApp.delegate as? AppDelegate,
+       appDelegate.isQuitting,
+       NSDocumentController.shared.documents.isEmpty {
+        NSApp.terminate(nil)
+    }
+}
+```
+
+This way:
+- Cmd+Q → sends `confirm qa` to all windows → returns `.terminateCancel`
+- Each nvim that confirms exits → event stream ends → `close()` called
+- Last `close()` sees `isQuitting` + no documents → calls `terminate` → `applicationShouldTerminate` returns `.terminateNow` (no documents)
+- If user cancels in any nvim → that window stays open → `isQuitting` stays true but no terminate happens
+- Next Cmd+Q → same flow (re-sends `confirm qa`)
+
+Need to handle: if user cancels in one window but confirms in others, `isQuitting` should reset. Add a timer that resets `isQuitting` after a few seconds if documents still exist.
+
+Actually simpler: don't reset. If user presses Cmd+Q again, `isQuitting` is already true, we send `confirm qa` again to remaining windows. Works fine.
+
+- [ ] **Step 1: Read AppDelegate.swift and WindowDocument.swift**
+- [ ] **Step 2: Add `isQuitting` flag and update `applicationShouldTerminate`**
+- [ ] **Step 3: Update WindowDocument.close() to check for quit completion**
+- [ ] **Step 4: Build and verify**
+- [ ] **Step 5: Commit**
+
+```bash
+git add Veil/AppDelegate.swift Veil/Window/WindowDocument.swift
+git commit -m "Cmd+Q confirms unsaved buffers via neovim before quitting"
+```
+
+---
+
 ## Metal Rendering Layer
 
 ### Task 42: Metal Infrastructure — Device, Layer, Pipeline
