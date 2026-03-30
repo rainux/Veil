@@ -5,13 +5,26 @@ import AppKit
 extension NvimView {
     override func performKeyEquivalent(with event: NSEvent) -> Bool {
         guard event.modifierFlags.contains(.command),
-              let chars = event.charactersIgnoringModifiers,
-              let digit = chars.first?.wholeNumberValue,
-              digit >= 1 && digit <= 9 else {
+              let chars = event.charactersIgnoringModifiers else {
             return super.performKeyEquivalent(with: event)
         }
-        let cmd = digit == 9 ? "tablast" : "tabnext \(digit)"
-        Task { try? await channel?.command(cmd) }
+
+        // Cmd+1-9: tab switching
+        if let digit = chars.first?.wholeNumberValue, digit >= 1 && digit <= 9 {
+            let cmd = digit == 9 ? "tablast" : "tabnext \(digit)"
+            Task { try? await channel?.command(cmd) }
+            return true
+        }
+
+        // Let system handle these Cmd+key combos
+        let systemKeys: Set<String> = ["q", "n", "h", "m", ","]
+        if systemKeys.contains(chars.lowercased()) {
+            return super.performKeyEquivalent(with: event)
+        }
+
+        // Everything else goes to nvim as <D-key>
+        let nvimKey = KeyUtils.nvimKey(characters: chars, modifiers: event.modifierFlags)
+        Task { await channel?.send(key: nvimKey) }
         return true
     }
 
@@ -42,7 +55,14 @@ extension NvimView {
     }
 
     private func sendKeyDirectly(_ event: NSEvent) {
-        guard let characters = event.characters else { return }
+        let modifiers = event.modifierFlags.intersection([.control, .option, .command])
+        let chars: String?
+        if !modifiers.isEmpty {
+            chars = event.charactersIgnoringModifiers
+        } else {
+            chars = event.characters
+        }
+        guard let characters = chars, !characters.isEmpty else { return }
         let nvimKey = KeyUtils.nvimKey(characters: characters, modifiers: event.modifierFlags)
         guard !nvimKey.isEmpty else { return }
         Task { await channel?.send(key: nvimKey) }
