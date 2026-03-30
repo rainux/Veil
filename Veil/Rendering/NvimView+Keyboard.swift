@@ -1,4 +1,5 @@
 import AppKit
+import MessagePack
 
 // MARK: - Keyboard handling
 
@@ -17,7 +18,7 @@ extension NvimView {
         }
 
         // Let system handle these Cmd+key combos
-        let systemKeys: Set<String> = ["q", "n", "h", "m", ","]
+        let systemKeys: Set<String> = ["q", "n", "h", "m", ",", "z", "x", "c", "v", "a", "`"]
         if systemKeys.contains(chars.lowercased()) {
             return super.performKeyEquivalent(with: event)
         }
@@ -104,6 +105,34 @@ extension NvimView {
         markedTextLayer.isHidden = true
         markedTextLayer.string = nil
         CATransaction.commit()
+    }
+    // MARK: - Standard Edit actions
+
+    @objc func undo(_ sender: Any?) {
+        Task { await channel?.send(key: "u") }
+    }
+
+    @objc func redo(_ sender: Any?) {
+        Task { await channel?.send(key: "<C-r>") }
+    }
+
+    @objc func cut(_ sender: Any?) {
+        Task { await channel?.send(key: "\"+d") }
+    }
+
+    @objc func copy(_ sender: Any?) {
+        Task { await channel?.send(key: "\"+y") }
+    }
+
+    @objc func paste(_ sender: Any?) {
+        guard let text = NSPasteboard.general.string(forType: .string) else { return }
+        Task {
+            _ = await channel?.request("nvim_paste", params: [.string(text), .bool(true), .int(-1)])
+        }
+    }
+
+    override func selectAll(_ sender: Any?) {
+        Task { await channel?.send(key: "ggVG") }
     }
 }
 
