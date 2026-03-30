@@ -51,22 +51,4 @@ struct Profile: Codable, Hashable, Sendable {
         return profiles.isEmpty ? [.default] : profiles
     }
 
-    // MARK: - Last Used
-
-    private static let lastUsedKey = "Profile.lastUsed"
-
-    static var lastUsed: Profile {
-        get {
-            guard let data = UserDefaults.standard.data(forKey: lastUsedKey),
-                  let profile = try? JSONDecoder().decode(Profile.self, from: data)
-            else {
-                return .default
-            }
-            return profile
-        }
-        set {
-            let data = try? JSONEncoder().encode(newValue)
-            UserDefaults.standard.set(data, forKey: lastUsedKey)
-        }
-    }
 }

@@ -4,7 +4,7 @@ import Cocoa
 class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationDidFinishLaunching(_ aNotification: Notification) {
         addProfilePickerMenuItem()
-        createWindow(profile: Profile.lastUsed)
+        createWindow(profile: Profile.default)
     }
 
     func applicationWillTerminate(_ aNotification: Notification) {}
@@ -23,7 +23,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
     /// Cmd+N: create a new window with the last-used profile directly (no picker).
     @IBAction func newDocument(_ sender: Any?) {
-        createWindow(profile: Profile.lastUsed)
+        createWindow(profile: Profile.default)
     }
 
     /// Cmd+Shift+N: show profile picker then create window.
@@ -48,7 +48,6 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     func createWindow(profile: Profile) {
         let doc = WindowDocument()
         doc.profile = profile
-        Profile.lastUsed = profile
         NSDocumentController.shared.addDocument(doc)
         doc.makeWindowControllers()
         doc.showWindows()
