@@ -10,7 +10,7 @@ Your Neovim config, rendered natively with AppKit, in proper macOS windows. Noth
 - **Tabs** — neovim's native tabline, switchable with Cmd+1 through Cmd+9.
 - **Profile support** — Cmd+Shift+N to choose a different `NVIM_APPNAME` per window.
 - **CJK & IME** — full input method support for Chinese, Japanese, Korean.
-- **Retina rendering** — layer-backed CoreText rendering with glyph caching at 2x scale.
+- **Metal rendering** — GPU-accelerated rendering with glyph texture atlas. Entire grid drawn in a single Metal draw call. Falls back to CoreText if Metal is unavailable.
 - **System integration** — standard Edit/File menu actions, trackpad scrolling, window size persistence.
 
 ## Requirements
