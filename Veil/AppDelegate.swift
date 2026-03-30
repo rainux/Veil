@@ -27,13 +27,17 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
     func applicationWillTerminate(_ aNotification: Notification) {}
 
-    var isQuitting = false
+    // Tracks which documents should close as part of a Cmd+Q quit attempt.
+    // When all tracked documents have closed, the app terminates.
+    // Documents closed normally (Cmd+W) are not in this set, so they
+    // don't trigger app termination.
+    var quittingDocuments: Set<ObjectIdentifier> = []
 
     func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
         let documents = NSDocumentController.shared.documents.compactMap { $0 as? WindowDocument }
         if documents.isEmpty { return .terminateNow }
 
-        isQuitting = true
+        quittingDocuments = Set(documents.map { ObjectIdentifier($0) })
         for doc in documents {
             Task { @MainActor in
                 try? await doc.channel.command("confirm qa")

@@ -143,11 +143,15 @@ class WindowDocument: NSDocument {
         Task { await channel.stop() }
         super.close()
 
-        // If app is quitting and this was the last window, finish termination
-        if let appDelegate = NSApp.delegate as? AppDelegate,
-           appDelegate.isQuitting,
-           NSDocumentController.shared.documents.isEmpty {
-            NSApp.terminate(nil)
+        // If this document was part of a Cmd+Q quit attempt and all
+        // quit-targeted documents are now closed, finish termination.
+        if let appDelegate = NSApp.delegate as? AppDelegate {
+            let wasPartOfQuit = appDelegate.quittingDocuments.remove(ObjectIdentifier(self)) != nil
+            if wasPartOfQuit,
+               appDelegate.quittingDocuments.isEmpty,
+               NSDocumentController.shared.documents.isEmpty {
+                NSApp.terminate(nil)
+            }
         }
     }
 
