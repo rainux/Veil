@@ -2,7 +2,21 @@ import Cocoa
 
 @main
 class AppDelegate: NSObject, NSApplicationDelegate {
-    private var initialCliArgs: [String] = Array(ProcessInfo.processInfo.arguments.dropFirst())
+    // CLI args to pass to nvim. Filter out macOS/Xcode injected arguments
+    // (e.g. -NSDocumentRevisionsDebugMode, -ApplePersistenceIgnoreState).
+    private var initialCliArgs: [String] = {
+        var args: [String] = []
+        var skip = false
+        for arg in ProcessInfo.processInfo.arguments.dropFirst() {
+            if skip { skip = false; continue }
+            if arg.hasPrefix("-NS") || arg.hasPrefix("-Apple") {
+                skip = true  // skip this flag and its value
+                continue
+            }
+            args.append(arg)
+        }
+        return args
+    }()
 
     func applicationDidFinishLaunching(_ aNotification: Notification) {
         Task.detached { NvimProcess.warmUpEnvironment() }
