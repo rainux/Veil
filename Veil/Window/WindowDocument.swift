@@ -3,6 +3,7 @@ import MessagePack
 
 class WindowDocument: NSDocument {
     var profile = Profile.default
+    var nvimArgs: [String] = []
 
     var channel: NvimChannel!
     private let grid = Grid()
@@ -53,7 +54,7 @@ class WindowDocument: NSDocument {
 
     private func startNvim() async {
         do {
-            try await channel.start(nvimPath: "", cwd: NSHomeDirectory(), appName: profile.name)
+            try await channel.start(nvimPath: "", cwd: NSHomeDirectory(), appName: profile.name, extraArgs: nvimArgs)
             guard let nvimView else { return }
             let gridSize = nvimView.gridSizeForViewSize(nvimView.bounds.size)
             try await channel.uiAttach(width: gridSize.cols, height: gridSize.rows)

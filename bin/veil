@@ -1,0 +1,27 @@
+#!/bin/sh
+# Launch Veil with all arguments passed to the embedded nvim.
+# Symlink this to a directory in your PATH:
+#   ln -s /Applications/Veil.app/Contents/bin/veil ~/.local/bin/veil
+
+# Resolve the real path of this script (handles symlinks)
+self_path="$0"
+while [ -L "$self_path" ]; do
+    dir="$(cd "$(dirname "$self_path")" && pwd -P)"
+    self_path="$(readlink "$self_path")"
+    [ "${self_path#/}" = "$self_path" ] && self_path="$dir/$self_path"
+done
+binary="$(cd "$(dirname "$self_path")/../MacOS" && pwd -P)/Veil"
+
+if ! [ -x "$binary" ]; then
+    echo "Cannot find Veil executable." >&2
+    exit 1
+fi
+
+# Detect invocation name for vimdiff mode
+name="$(basename "$0")"
+opts=""
+case "$name" in
+    *vimdiff) opts="-d" ;;
+esac
+
+exec "$binary" $opts "$@"

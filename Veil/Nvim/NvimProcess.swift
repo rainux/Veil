@@ -11,6 +11,7 @@ nonisolated final class NvimProcess: @unchecked Sendable {
     private let cwd: String
     private let appName: String
     private let additionalEnv: [String: String]
+    private let extraArgs: [String]
 
     var isRunning: Bool {
         _processLock.lock()
@@ -22,12 +23,14 @@ nonisolated final class NvimProcess: @unchecked Sendable {
         nvimPath: String = "",
         cwd: String = NSHomeDirectory(),
         appName: String = "nvim",
-        additionalEnv: [String: String] = [:]
+        additionalEnv: [String: String] = [:],
+        extraArgs: [String] = []
     ) {
         self.nvimPath = nvimPath
         self.cwd = cwd
         self.appName = appName
         self.additionalEnv = additionalEnv
+        self.extraArgs = extraArgs
     }
 
     func start() throws {
@@ -43,7 +46,7 @@ nonisolated final class NvimProcess: @unchecked Sendable {
         env["NVIM_APPNAME"] = appName
         env.merge(additionalEnv) { _, new in new }
         process.environment = env
-        process.arguments = ["--embed"]
+        process.arguments = ["--embed"] + extraArgs
         try process.run()
         _processLock.lock()
         _process = process

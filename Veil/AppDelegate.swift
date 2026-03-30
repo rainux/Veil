@@ -2,6 +2,8 @@ import Cocoa
 
 @main
 class AppDelegate: NSObject, NSApplicationDelegate {
+    private var initialCliArgs: [String] = Array(ProcessInfo.processInfo.arguments.dropFirst())
+
     func applicationDidFinishLaunching(_ aNotification: Notification) {
         Task.detached { NvimProcess.warmUpEnvironment() }
         addProfilePickerMenuItem()
@@ -49,6 +51,10 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     func createWindow(profile: Profile) {
         let doc = WindowDocument()
         doc.profile = profile
+        if !initialCliArgs.isEmpty {
+            doc.nvimArgs = initialCliArgs
+            initialCliArgs = []
+        }
         NSDocumentController.shared.addDocument(doc)
         doc.makeWindowControllers()
         doc.showWindows()

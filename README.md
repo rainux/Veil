@@ -64,6 +64,20 @@ Everything else (including all Ctrl+key and other Cmd+key combinations) is sent 
 vim.keymap.set('n', '<D-p>', Snacks.picker.files)
 ```
 
+## CLI
+
+Veil ships a `veil` command inside the app bundle. Symlink it to your PATH:
+
+    ln -s /Applications/Veil.app/Contents/bin/veil ~/.local/bin/veil
+    ln -s /Applications/Veil.app/Contents/bin/gvim ~/.local/bin/gvim
+    ln -s /Applications/Veil.app/Contents/bin/gvimdiff ~/.local/bin/gvimdiff
+
+Then use it like nvim:
+
+    veil file.txt
+    veil -d file1.txt file2.txt
+    gvimdiff file1.txt file2.txt    # same as veil -d
+
 ## Acknowledgments
 
 Thanks to [VimR](https://github.com/qvacua/vimr) by Tae Won Ha — Veil learned a great deal from its implementation of the Neovim UI protocol, input handling, and macOS integration.
