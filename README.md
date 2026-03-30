@@ -1,6 +1,6 @@
 # Veil
 
-A boring, vanilla Neovim GUI client for macOS — just like MacVim did for Vim.
+A quiet, vanilla Neovim GUI for macOS — in the tradition of MacVim.
 
 Your Neovim config, rendered natively with AppKit, in proper macOS windows. Nothing more, nothing less. Fast startup, fast multi-tab session loading.
 
