@@ -37,6 +37,7 @@ nonisolated final class GlyphAtlas {
         self.atlasWidth = size
         self.atlasHeight = size
         self.texture = createTexture(size: size)
+        self.nextX = 1  // Reserve pixel (0,0) as transparent sentinel for empty cells
     }
 
     func region(text: String, font: NSFont, bold: Bool, italic: Bool,
@@ -91,7 +92,7 @@ nonisolated final class GlyphAtlas {
 
     func invalidate() {
         regions.removeAll()
-        nextX = 0
+        nextX = 1  // Reserve pixel (0,0) as transparent sentinel
         nextY = 0
         currentRowHeight = 0
         // Clear texture

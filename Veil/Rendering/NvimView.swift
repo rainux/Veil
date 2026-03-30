@@ -32,10 +32,11 @@ final class NvimView: NSView {
     let markedLayer = CALayer()
     var keyDownDone = true
 
-    // MARK: - Metal (hidden for now)
+    // MARK: - Metal
 
     var metalRenderer: MetalRenderer?
     var metalLayer: CAMetalLayer?
+    var glyphAtlas: GlyphAtlas?
 
     // MARK: - Private
 
@@ -80,9 +81,10 @@ final class NvimView: NSView {
         markedLayer.zPosition = 200
         layer?.addSublayer(markedLayer)
 
-        // Metal layer (hidden for now — will replace CALayer rendering later)
+        // Metal layer for GPU-accelerated grid rendering
         do {
             let renderer = try MetalRenderer()
+            let atlas = GlyphAtlas(device: renderer.device)
             let metal = CAMetalLayer()
             metal.device = renderer.device
             metal.pixelFormat = .bgra8Unorm
@@ -90,6 +92,7 @@ final class NvimView: NSView {
             metal.isHidden = true
             layer?.addSublayer(metal)
             self.metalRenderer = renderer
+            self.glyphAtlas = atlas
             self.metalLayer = metal
         } catch {
             // Metal not available — fall back to CoreText rendering
@@ -107,56 +110,83 @@ final class NvimView: NSView {
     // MARK: - Rendering
 
     func render(grid: Grid) {
-        let rows = grid.size.rows
-        let cols = grid.size.cols
-
-        // Ensure we have the right number of row layers
-        while rowLayers.count < rows {
-            let rowLayer = CALayer()
-            rowLayer.contentsScale = window?.backingScaleFactor ?? 2.0
-            rowLayer.magnificationFilter = .nearest
-            layer?.addSublayer(rowLayer)
-            rowLayers.append(rowLayer)
-        }
-        while rowLayers.count > rows {
-            rowLayers.removeLast().removeFromSuperlayer()
-        }
-
-        // Configure scale for Retina rendering
-        let screenScale = window?.backingScaleFactor ?? 2.0
-        glyphCache.scale = screenScale
-
-        // Render dirty rows
-        for rowIdx in grid.dirtyRows {
-            guard rowIdx < rows else { continue }
-            let rowCells = grid.cells[rowIdx]
-            if let image = rowRenderer.render(
-                row: rowCells,
-                attributes: grid.attributes,
-                defaultFg: grid.defaultForeground,
-                defaultBg: grid.defaultBackground,
-                scale: screenScale
-            ) {
-                let rowLayer = rowLayers[rowIdx]
-                // Flip Y: row 0 is at the top of the view, offset by gridTopPadding
-                let y = bounds.height - CGFloat(rowIdx + 1) * cellSize.height - Self.gridTopPadding
-                CATransaction.begin()
-                CATransaction.setDisableActions(true)
-                rowLayer.frame = CGRect(
-                    x: 0, y: y,
-                    width: cellSize.width * CGFloat(cols),
-                    height: cellSize.height
-                )
-                rowLayer.contents = image
-                CATransaction.commit()
-            }
-        }
-
-        // Update cursor
-        updateCursorPosition(grid.cursorPosition)
-
-        // Store flat char indices for IME
+        // Update state
+        defaultFg = grid.defaultForeground
+        defaultBg = grid.defaultBackground
         flatCharIndices = grid.flatCharIndices
+
+        if let metalRenderer, let metalLayer, let glyphAtlas {
+            // Metal rendering path — hide old layers
+            metalLayer.isHidden = false
+            for rl in rowLayers { rl.isHidden = true }
+            cursorLayer.isHidden = true
+
+            metalLayer.frame = bounds
+            metalLayer.contentsScale = window?.backingScaleFactor ?? 2.0
+            metalLayer.drawableSize = CGSize(
+                width: bounds.width * metalLayer.contentsScale,
+                height: bounds.height * metalLayer.contentsScale
+            )
+            glyphAtlas.scale = metalLayer.contentsScale
+
+            metalRenderer.render(
+                cells: grid.cells, attributes: grid.attributes,
+                rows: grid.size.rows, cols: grid.size.cols,
+                atlas: glyphAtlas, font: gridFont,
+                cellSize: cellSize, gridTopPadding: Self.gridTopPadding,
+                defaultFg: defaultFg, defaultBg: defaultBg,
+                cursorPosition: grid.cursorPosition,
+                cursorShape: currentCursorShape,
+                cursorCellPercentage: currentCursorCellPercentage,
+                in: metalLayer
+            )
+        } else {
+            // Fallback: old CoreText rendering
+            let rows = grid.size.rows
+            let cols = grid.size.cols
+
+            while rowLayers.count < rows {
+                let rowLayer = CALayer()
+                rowLayer.contentsScale = window?.backingScaleFactor ?? 2.0
+                rowLayer.magnificationFilter = .nearest
+                layer?.addSublayer(rowLayer)
+                rowLayers.append(rowLayer)
+            }
+            while rowLayers.count > rows {
+                rowLayers.removeLast().removeFromSuperlayer()
+            }
+
+            let screenScale = window?.backingScaleFactor ?? 2.0
+            glyphCache.scale = screenScale
+
+            for rowIdx in grid.dirtyRows {
+                guard rowIdx < rows else { continue }
+                let rowCells = grid.cells[rowIdx]
+                if let image = rowRenderer.render(
+                    row: rowCells,
+                    attributes: grid.attributes,
+                    defaultFg: grid.defaultForeground,
+                    defaultBg: grid.defaultBackground,
+                    scale: screenScale
+                ) {
+                    let rowLayer = rowLayers[rowIdx]
+                    let y = bounds.height - CGFloat(rowIdx + 1) * cellSize.height - Self.gridTopPadding
+                    CATransaction.begin()
+                    CATransaction.setDisableActions(true)
+                    rowLayer.frame = CGRect(
+                        x: 0, y: y,
+                        width: cellSize.width * CGFloat(cols),
+                        height: cellSize.height
+                    )
+                    rowLayer.contents = image
+                    CATransaction.commit()
+                }
+            }
+
+            updateCursorPosition(grid.cursorPosition)
+        }
+
+        layer?.backgroundColor = NSColor(rgb: defaultBg).cgColor
     }
 
     // MARK: - Cursor
@@ -211,9 +241,9 @@ final class NvimView: NSView {
         let cleanName = fontName.replacingOccurrences(of: "\\ ", with: " ")
             .replacingOccurrences(of: "_", with: " ")
         if let font = NSFont(name: cleanName, size: size) {
-            updateFont(font)
+            gridFont = font  // triggers didSet → updateFont
         } else {
-            updateFont(NSFont.monospacedSystemFont(ofSize: size, weight: .regular))
+            gridFont = NSFont.monospacedSystemFont(ofSize: size, weight: .regular)
         }
     }
 
@@ -222,6 +252,7 @@ final class NvimView: NSView {
         cellSize = newCellSize
         glyphCache.updateFont(newFont, cellSize: newCellSize)
         rowRenderer.updateCellSize(newCellSize)
+        glyphAtlas?.invalidate()
     }
 
     private static let lineHeightMultiplier: CGFloat = 1.2
