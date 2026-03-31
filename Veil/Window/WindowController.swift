@@ -30,7 +30,7 @@ class WindowController: NSWindowController, NSWindowDelegate {
         let titleLabel = NSTextField(labelWithString: "Veil")
         titleLabel.translatesAutoresizingMaskIntoConstraints = false
         titleLabel.font = .titleBarFont(ofSize: 0)
-        titleLabel.textColor = .labelColor
+        titleLabel.textColor = .white
         titleLabel.lineBreakMode = .byTruncatingTail
 
         let container = NSView()
@@ -58,7 +58,8 @@ class WindowController: NSWindowController, NSWindowDelegate {
     }
 
     func updateTitle(_ title: String) {
-        customTitleLabel?.stringValue = title
+        let renderer = nvimView.metalRenderer != nil ? "Metal" : "CoreText"
+        customTitleLabel?.stringValue = "\(title) [\(renderer)]"
         window?.title = title
     }
 
