@@ -6,12 +6,19 @@
 
 A quiet, vanilla Neovim GUI for macOS — in the tradition of MacVim.
 
-Your Neovim config, rendered natively with AppKit, in proper macOS windows. Nothing more, nothing less. Fast startup, fast multi-tab session loading.
+Your Neovim config, in proper macOS windows with Metal GPU rendering. Nothing more, nothing less. Fast startup, fast multi-tab session loading.
+
+### Why a GUI instead of the terminal?
+
+- **Cmd+1/2/3 to switch tabs** — in a terminal, these shortcuts conflict with the terminal emulator. Veil gives them directly to Neovim's tabpages, zero configuration.
+- **Cmd+\` to cycle windows** — each window is an independent Neovim session. Instantly switch between projects in the same space, or spread them across spaces and displays.
+
+No terminal keybinding hacks, no tmux layers. Just Neovim in a native macOS window.
 
 ## Features
 
-- **Multi-window** — each window runs an independent neovim process. Cmd+N to create, Cmd+\` to cycle.
-- **Tabs** — neovim's native tabline, switchable with Cmd+1 through Cmd+9.
+- **Multi-window** — each window runs an independent Neovim process. Cmd+N to create, Cmd+\` to cycle.
+- **Tabs** — Neovim's native tabline, switchable with Cmd+1 through Cmd+9.
 - **Profile support** — Cmd+Shift+N to choose a different `NVIM_APPNAME` per window.
 - **CJK & IME** — full input method support for Chinese, Japanese, Korean.
 - **Metal rendering** — GPU-accelerated rendering with glyph texture atlas. Entire grid drawn in a single Metal draw call. Falls back to CoreText if Metal is unavailable.
@@ -26,7 +33,7 @@ Your Neovim config, rendered natively with AppKit, in proper macOS windows. Noth
 - macOS 14+
 - Neovim 0.10+ (install via `brew install neovim`)
 
-Veil uses your system-installed neovim. No bundled binary — you always get the latest version you chose to install.
+Veil uses your system-installed Neovim. No bundled binary — you always get the latest version you chose to install.
 
 ## Install
 
@@ -49,11 +56,11 @@ make clean          # Clean build artifacts
 make lsp            # Generate buildServer.json for SourceKit-LSP
 ```
 
-For neovim/editor LSP support, run `make lsp` after cloning to generate `buildServer.json` (requires [xcode-build-server](https://github.com/nicklockwood/xcode-build-server)).
+For Neovim/editor LSP support, run `make lsp` after cloning to generate `buildServer.json` (requires [xcode-build-server](https://github.com/nicklockwood/xcode-build-server)).
 
 ## Usage
 
-Veil reads your existing neovim configuration (`~/.config/nvim/`). Set `guifont` in your config to choose a font:
+Veil reads your existing Neovim configuration (`~/.config/nvim/`). Set `guifont` in your config to choose a font:
 
 ```lua
 vim.o.guifont = 'Maple Mono NF CN:h16'
@@ -80,7 +87,7 @@ These Cmd+key shortcuts are handled by Veil:
 | Cmd+1-9     | Switch tab (9 = last)                 |
 | Cmd+Ctrl+F  | Toggle full screen                    |
 
-Everything else (including other Cmd+key and all Ctrl+key combinations) is sent directly to neovim as `<D-...>` or `<C-...>`. Map them in your config:
+Everything else (including other Cmd+key and all Ctrl+key combinations) is sent directly to Neovim as `<D-...>` or `<C-...>`. Map them in your config:
 
 ```lua
 -- Example: Cmd+P to open a file picker
@@ -109,7 +116,7 @@ If Veil is already running, the CLI forwards files to the existing instance (ope
 
 ### Multiple nvim configs
 
-Each window can run a different neovim configuration. Use `NVIM_APPNAME` from the CLI or Cmd+Shift+N from the GUI to select which config directory under `~/.config/` nvim uses:
+Each window can run a different Neovim configuration. Use `NVIM_APPNAME` from the CLI or Cmd+Shift+N from the GUI to select which config directory under `~/.config/` nvim uses:
 
 ```bash
 NVIM_APPNAME=astronvim veil              # launch Veil with astronvim config
