@@ -1,5 +1,9 @@
 # Veil
 
+<p align="center">
+  <img src="Veil/Assets.xcassets/AppIcon.appiconset/icon_128x128@2x.png" width="128" alt="Veil">
+</p>
+
 A quiet, vanilla Neovim GUI for macOS — in the tradition of MacVim.
 
 Your Neovim config, rendered natively with AppKit, in proper macOS windows. Nothing more, nothing less. Fast startup, fast multi-tab session loading.
@@ -12,6 +16,10 @@ Your Neovim config, rendered natively with AppKit, in proper macOS windows. Noth
 - **CJK & IME** — full input method support for Chinese, Japanese, Korean.
 - **Metal rendering** — GPU-accelerated rendering with glyph texture atlas. Entire grid drawn in a single Metal draw call. Falls back to CoreText if Metal is unavailable.
 - **System integration** — standard Edit/File menu actions, trackpad scrolling, window size persistence.
+
+<p align="center">
+  <img src="screenshots/main.png" alt="Veil screenshot">
+</p>
 
 ## Requirements
 
