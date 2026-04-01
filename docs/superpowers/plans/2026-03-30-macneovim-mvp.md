@@ -5854,3 +5854,94 @@ git add bin/veil Veil/AppDelegate.swift Veil/Window/WindowDocument.swift Veil/Nv
 git commit -m "Fix CLI binary detection fallback and forward full shell env on single-instance"
 ```
 
+---
+
+### Task 48: Metal Debug Overlay
+
+**Files:**
+- Modify: `Veil/Rendering/Metal/MetalRenderer.swift` (render overlay quad)
+- Modify: `Veil/Rendering/NvimView.swift` (track FPS, expose debug toggle)
+- Modify: `Veil/AppDelegate.swift` (add Debug menu item)
+
+**Goal:** A semi-transparent overlay in the top-right corner showing debug info (renderer, FPS, grid size, atlas stats). Toggled via View menu. Rendered as part of the Metal draw call.
+
+**Implementation:**
+
+**MetalRenderer.swift:**
+
+Add a method to render an overlay texture on top of the grid. The overlay is a CGImage created with CoreText (debug text on a semi-transparent dark background), uploaded to a temporary Metal texture, drawn as a single quad in the top-right corner.
+
+```swift
+func renderDebugOverlay(text: String, viewportWidth: Float, viewportHeight: Float,
+                         scale: Float, encoder: MTLRenderCommandEncoder) {
+    // Render debug text to CGImage using CoreText
+    let font = CTFontCreateWithName("Menlo" as CFString, 11, nil)
+    let attrs: [NSAttributedString.Key: Any] = [
+        .font: font,
+        .foregroundColor: NSColor.white
+    ]
+    let attrString = NSAttributedString(string: text, attributes: attrs)
+    let framesetter = CTFramesetterCreateWithAttributedString(attrString)
+    let suggestedSize = CTFramesetterSuggestFrameSizeWithConstraints(
+        framesetter, CFRange(location: 0, length: 0), nil,
+        CGSize(width: 300, height: 200), nil
+    )
+
+    let pixelW = Int(ceil(suggestedSize.width * CGFloat(scale))) + 16
+    let pixelH = Int(ceil(suggestedSize.height * CGFloat(scale))) + 8
+
+    // Create CGContext, fill semi-transparent black bg, draw text
+    // Upload pixels to a MTLTexture
+    // Draw quad at top-right corner of viewport
+}
+```
+
+Call this at the end of `render()`, after the cursor quad, before `endEncoding()`.
+
+The overlay texture can be cached and only rebuilt when the debug text changes (typically once per frame for FPS, but could throttle to every 0.5s).
+
+**NvimView.swift:**
+
+Add:
+- `var debugOverlayEnabled = false` property
+- FPS tracking: timestamp of last render, compute delta
+- Pass debug info string to MetalRenderer
+
+In `render(grid:)`, when debugOverlayEnabled:
+```swift
+let debugText = """
+Renderer: Metal (\(metalRenderer.device.name))
+FPS: \(currentFPS)
+Grid: \(grid.size.cols)×\(grid.size.rows)
+Atlas: \(glyphAtlas.regionCount)/\(glyphAtlas.atlasSize)
+"""
+```
+
+**AppDelegate.swift:**
+
+Add a "Toggle Debug Overlay" menu item under View menu (or a new Debug menu):
+```swift
+let debugItem = NSMenuItem(title: "Toggle Debug Overlay",
+    action: #selector(toggleDebugOverlay(_:)),
+    keyEquivalent: "")
+```
+
+Route to the active NvimView to flip `debugOverlayEnabled`.
+
+**GlyphAtlas.swift:**
+
+Expose `regionCount` (number of cached glyphs) for the debug display.
+
+- [ ] **Step 1: Read MetalRenderer.swift, NvimView.swift, AppDelegate.swift, GlyphAtlas.swift**
+- [ ] **Step 2: Add overlay rendering to MetalRenderer**
+- [ ] **Step 3: Add debug toggle and FPS tracking to NvimView**
+- [ ] **Step 4: Add menu item in AppDelegate**
+- [ ] **Step 5: Expose regionCount in GlyphAtlas**
+- [ ] **Step 6: Build and verify**
+- [ ] **Step 7: Commit**
+
+```bash
+git add Veil/Rendering/Metal/MetalRenderer.swift Veil/Rendering/NvimView.swift Veil/AppDelegate.swift Veil/Rendering/Metal/GlyphAtlas.swift
+git commit -m "Add Metal debug overlay with renderer, FPS, grid size, atlas stats"
+```
+
