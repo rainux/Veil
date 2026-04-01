@@ -5,6 +5,7 @@ class WindowDocument: NSDocument, NvimViewDelegate {
     var profile = Profile.default
     var nvimArgs: [String] = []
     var nvimEnv: [String: String]?
+    var preferredRenderer: NvimView.Renderer = .metal
 
     var channel: NvimChannel!
     private let grid = Grid()
@@ -49,6 +50,8 @@ class WindowDocument: NSDocument, NvimViewDelegate {
 
     override func makeWindowControllers() {
         let controller = WindowController()
+        controller.nvimView.preferredRenderer = preferredRenderer
+        controller.nvimView.setupLayers()
         controller.nvimView.delegate = self
         controller.nvimView.channel = channel
         addWindowController(controller)
@@ -63,7 +66,7 @@ class WindowDocument: NSDocument, NvimViewDelegate {
         if !nvimArgs.isEmpty { titleReady = true }
         do {
             let cwd = nvimEnv?["PWD"]
-                ?? ProcessInfo.processInfo.environment["VEIL_CWD"]
+                ?? ProcessInfo.processInfo.environment["PWD"]
                 ?? NSHomeDirectory()
             try await channel.start(nvimPath: "", cwd: cwd, appName: profile.name,
                                     extraArgs: nvimArgs, env: nvimEnv)

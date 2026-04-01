@@ -35,6 +35,6 @@ case "$name" in
     *vimdiff) opts="-d" ;;
 esac
 
-# Pass current working directory so nvim opens files correctly.
 # Launch in background and exit immediately.
-VEIL_CWD="$(pwd -P)" "$binary" $opts "$@" &
+# PWD is inherited from the parent shell so nvim opens files correctly.
+"$binary" $opts "$@" &

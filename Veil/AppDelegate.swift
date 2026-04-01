@@ -6,23 +6,18 @@ extension NSNotification.Name {
 
 @main
 class AppDelegate: NSObject, NSApplicationDelegate {
-    // CLI args to pass to nvim. Filter out macOS/Xcode injected arguments
-    // (e.g. -NSDocumentRevisionsDebugMode, -ApplePersistenceIgnoreState).
-    private var initialCliArgs: [String] = {
-        var args: [String] = []
-        var skip = false
-        for arg in ProcessInfo.processInfo.arguments.dropFirst() {
-            if skip { skip = false; continue }
-            if arg.hasPrefix("-NS") || arg.hasPrefix("-Apple") {
-                skip = true  // skip this flag and its value
-                continue
-            }
-            args.append(arg)
-        }
-        return args
-    }()
+    // Parse CLI args eagerly at init time, before any delegate methods run.
+    // application(_:openFiles:) can fire before applicationDidFinishLaunching
+    // when macOS detects file arguments matching registered document types.
+    private(set) lazy var parsedArgs: CliArgParser.Result = CliArgParser.parse(ProcessInfo.processInfo.arguments)
+    private var initialCliArgs: [String] {
+        get { parsedArgs.nvimArgs }
+        set { parsedArgs.nvimArgs = newValue }
+    }
+    var preferredRenderer: NvimView.Renderer { parsedArgs.renderer }
 
     func applicationDidFinishLaunching(_ aNotification: Notification) {
+
         // Writing to a closed pipe sends SIGPIPE, which terminates the process
         // by default. This happens when nvim exits but an RPC call is still
         // in flight (e.g. windowDidResignKey sends nvim_ui_set_focus after
@@ -91,6 +86,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     func application(_ sender: NSApplication, openFiles filenames: [String]) {
         let doc = WindowDocument()
         doc.profile = profileFromEnvironment()
+        doc.preferredRenderer = preferredRenderer
         doc.nvimArgs = filenames
         NSDocumentController.shared.addDocument(doc)
         doc.makeWindowControllers()
@@ -170,6 +166,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     func createWindow(profile: Profile) {
         let doc = WindowDocument()
         doc.profile = profile
+        doc.preferredRenderer = preferredRenderer
         if !initialCliArgs.isEmpty {
             doc.nvimArgs = initialCliArgs
             initialCliArgs = []
@@ -194,6 +191,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         let profile = nvimAppName.map { Profile(name: $0, displayName: $0) } ?? Profile.default
         let doc = WindowDocument()
         doc.profile = profile
+        doc.preferredRenderer = preferredRenderer
         doc.nvimArgs = files
         doc.nvimEnv = env
         NSDocumentController.shared.addDocument(doc)

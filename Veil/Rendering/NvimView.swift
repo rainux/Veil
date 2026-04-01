@@ -9,9 +9,12 @@ protocol NvimViewDelegate: AnyObject {
 
 @MainActor
 final class NvimView: NSView {
+    enum Renderer { case metal, coretext }
+
     // MARK: - Public properties
 
     weak var delegate: NvimViewDelegate?
+    var preferredRenderer: Renderer = .metal
     var channel: NvimChannel?
     var gridFont: NSFont {
         didSet { updateFont(gridFont) }
@@ -66,7 +69,6 @@ final class NvimView: NSView {
         self.glyphCache = GlyphCache(font: defaultFont, cellSize: size)
         self.rowRenderer = RowRenderer(cellSize: size, glyphCache: glyphCache)
         super.init(frame: frame)
-        setupLayers()
     }
 
     required init?(coder: NSCoder) {
@@ -79,10 +81,9 @@ final class NvimView: NSView {
         self.glyphCache = GlyphCache(font: defaultFont, cellSize: size)
         self.rowRenderer = RowRenderer(cellSize: size, glyphCache: glyphCache)
         super.init(coder: coder)
-        setupLayers()
     }
 
-    private func setupLayers() {
+    func setupLayers() {
         wantsLayer = true
         layer?.backgroundColor = NSColor(rgb: defaultBg).cgColor
 
@@ -95,6 +96,7 @@ final class NvimView: NSView {
         layer?.addSublayer(markedLayer)
 
         // Metal layer for GPU-accelerated grid rendering
+        guard preferredRenderer == .metal else { return }
         do {
             let renderer = try MetalRenderer()
             let atlas = GlyphAtlas(device: renderer.device)
