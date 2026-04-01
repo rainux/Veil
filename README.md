@@ -10,15 +10,9 @@ Your Neovim config, in proper macOS windows with Metal GPU rendering. Nothing mo
 
 ### Why another Neovim GUI?
 
-MacVim introduced a workflow that set it apart from gVim: multiple independent windows in a single app, each with its own tabs, switching between projects instantly with Cmd+\`. You could have three codebases open, Cmd+\` between them, and Cmd+1/2/3 to jump to specific tabs within each one.
-
-In the Neovim era, most GUI frontends followed the gVim model: you can open multiple instances, but each is a separate process with no way to Cmd+\` between them. VimR was the exception, bringing the MacVim multi-window experience to Neovim, but its Redux architecture made startup and multi-tab session loading noticeably slow.
-
-Veil carries this tradition forward: a minimal, fast wrapper that gives Neovim first-class macOS citizenship. Multiple windows as independent workspaces, intuitive tab switching with Cmd+1/2/3, and as a native app instead of a terminal process, nearly all key sequences reach Neovim without being intercepted.
+Veil brings the MacVim workflow to Neovim: multiple independent windows in a single app, Cmd+\` to switch between projects, Cmd+1/2/3 to jump to tabs. As a native macOS app instead of a terminal process, nearly all key sequences reach Neovim without being intercepted.
 
 Vim is a tool built for focused, efficient work. Animations consume attention. Cursor effects, scroll easing, transition flourishes all pull your eyes away from what really matters — the text. Veil chooses to keep things quiet.
-
-> **Note:** Neovide v0.16.0 also shipped macOS multi-window support within one day of Veil's first release, a fun coincidence. Neovide is an excellent choice if you prefer a cross-platform solution with visual effects. Veil focuses on being a minimal native macOS wrapper (under 1 MB).
 
 ## Features
 
@@ -145,6 +139,16 @@ Create shell aliases for configs you use often:
 alias gvi='NVIM_APPNAME=nvim-nvchad gvim'
 gvi file.txt                             # just works, fresh launch or new window
 ```
+
+## Background
+
+MacVim introduced a workflow that set it apart from gVim: multiple independent windows in a single app, each with its own tabs, switching between projects instantly with Cmd+\`. You could have three codebases open, Cmd+\` between them, and Cmd+1/2/3 to jump to specific tabs within each one.
+
+In the Neovim era, most GUI frontends followed the gVim model: you can open multiple instances, but each is a separate process with no way to Cmd+\` between them. VimR was the exception, bringing the MacVim multi-window experience to Neovim, but its Redux architecture made startup and multi-tab session loading noticeably slow.
+
+Veil carries this tradition forward: a minimal, fast wrapper that gives Neovim first-class macOS citizenship. Multiple windows as independent workspaces, intuitive tab switching with Cmd+1/2/3, and as a native app instead of a terminal process, nearly all key sequences reach Neovim without being intercepted.
+
+> **Note:** Neovide v0.16.0 also shipped macOS multi-window support within one day of Veil's first release, a fun coincidence. Neovide is an excellent choice if you prefer a cross-platform solution with visual effects. Veil focuses on being a minimal native macOS wrapper (under 1 MB).
 
 ## Acknowledgments
 
