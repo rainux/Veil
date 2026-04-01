@@ -152,18 +152,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
     /// Cmd+Shift+N: show profile picker then create window.
     @IBAction func newDocumentWithProfilePicker(_ sender: Any?) {
-        guard let window = NSApp.keyWindow, let view = window.contentView else {
-            // No key window — fall back to showing picker relative to the menu bar.
-            // Create a temporary invisible view anchored at screen origin.
-            let tempView = NSView(frame: .zero)
-            NSApp.mainWindow?.contentView?.addSubview(tempView)
-            ProfilePicker.pick(relativeTo: tempView) { [weak tempView] profile in
-                tempView?.removeFromSuperview()
-                self.createWindow(profile: profile)
-            }
-            return
-        }
-        ProfilePicker.pick(relativeTo: view) { profile in
+        ProfilePicker.pick(in: NSApp.keyWindow) { profile in
             self.createWindow(profile: profile)
         }
     }
