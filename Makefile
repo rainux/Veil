@@ -5,13 +5,14 @@ DERIVED = .build
 APP = $(DERIVED)/Build/Products/Release/Veil.app
 INSTALL_DIR = /Applications
 UNIVERSAL = ONLY_ACTIVE_ARCH=NO
+NO_PROFILING = CLANG_ENABLE_CODE_COVERAGE=NO CLANG_COVERAGE_MAPPING=NO
 
 XCODEBUILD = xcodebuild -project $(PROJECT) -scheme $(SCHEME) -destination '$(DEST)'
 
 .PHONY: build debug test clean install zip release lsp
 
 build:
-	$(XCODEBUILD) -configuration Release -derivedDataPath $(DERIVED) $(UNIVERSAL) -quiet
+	$(XCODEBUILD) -configuration Release -derivedDataPath $(DERIVED) $(UNIVERSAL) $(NO_PROFILING) -quiet
 	@echo "Built: $(APP)"
 
 debug:

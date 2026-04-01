@@ -17,7 +17,7 @@ jobs:
         run: brew install neovim
 
       - name: Build
-        run: xcodebuild build -project Veil.xcodeproj -scheme Veil -destination 'platform=macOS' -configuration Release CODE_SIGNING_ALLOWED=NO ONLY_ACTIVE_ARCH=NO
+        run: xcodebuild build -project Veil.xcodeproj -scheme Veil -destination 'platform=macOS' -configuration Release CODE_SIGNING_ALLOWED=NO ONLY_ACTIVE_ARCH=NO CLANG_ENABLE_CODE_COVERAGE=NO CLANG_COVERAGE_MAPPING=NO
 
       - name: Test
         run: xcodebuild test -project Veil.xcodeproj -scheme Veil -destination 'platform=macOS' -only-testing:VeilTests CODE_SIGNING_ALLOWED=NO
@@ -35,7 +35,7 @@ jobs:
           fetch-tags: true
 
       - name: Build Release
-        run: xcodebuild build -project Veil.xcodeproj -scheme Veil -destination 'platform=macOS' -configuration Release -derivedDataPath build CODE_SIGNING_ALLOWED=NO ONLY_ACTIVE_ARCH=NO
+        run: xcodebuild build -project Veil.xcodeproj -scheme Veil -destination 'platform=macOS' -configuration Release -derivedDataPath build CODE_SIGNING_ALLOWED=NO ONLY_ACTIVE_ARCH=NO CLANG_ENABLE_CODE_COVERAGE=NO CLANG_COVERAGE_MAPPING=NO
 
       - name: Package app
         run: |
