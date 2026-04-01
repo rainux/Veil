@@ -10,6 +10,7 @@ nonisolated final class NvimProcess: @unchecked Sendable {
     private let nvimPath: String
     private let cwd: String
     private let appName: String
+    private let customEnv: [String: String]?
     private let additionalEnv: [String: String]
     private let extraArgs: [String]
 
@@ -23,12 +24,14 @@ nonisolated final class NvimProcess: @unchecked Sendable {
         nvimPath: String = "",
         cwd: String = NSHomeDirectory(),
         appName: String = "nvim",
+        customEnv: [String: String]? = nil,
         additionalEnv: [String: String] = [:],
         extraArgs: [String] = []
     ) {
         self.nvimPath = nvimPath
         self.cwd = cwd
         self.appName = appName
+        self.customEnv = customEnv
         self.additionalEnv = additionalEnv
         self.extraArgs = extraArgs
     }
@@ -42,7 +45,7 @@ nonisolated final class NvimProcess: @unchecked Sendable {
         process.qualityOfService = .userInteractive
         let binary = resolveNvimBinary()
         process.executableURL = URL(fileURLWithPath: binary)
-        var env = Self.cachedEnv
+        var env = customEnv ?? Self.cachedEnv
         env["NVIM_APPNAME"] = appName
         env.merge(additionalEnv) { _, new in new }
         process.environment = env
@@ -75,7 +78,31 @@ nonisolated final class NvimProcess: @unchecked Sendable {
     // and its plugins (e.g. Copilot.lua needing Node.js) can find their tools.
     // The result is cached — subsequent windows reuse it with no overhead.
 
-    private static let cachedEnv: [String: String] = captureLoginShellEnvironment()
+    private static var _cachedEnv: [String: String]?
+    private static let envLock = NSLock()
+
+    static var cachedEnv: [String: String] {
+        envLock.lock()
+        if let env = _cachedEnv {
+            envLock.unlock()
+            return env
+        }
+        envLock.unlock()
+        // Capture outside lock — this spawns a shell process and may take seconds
+        let env = captureLoginShellEnvironment()
+        envLock.lock()
+        if _cachedEnv == nil { _cachedEnv = env }
+        let result = _cachedEnv!
+        envLock.unlock()
+        return result
+    }
+
+    static func updateCachedEnv(from cliEnv: [String: String]) {
+        envLock.lock()
+        _cachedEnv = cliEnv
+        _cachedEnv?.removeValue(forKey: "NVIM_APPNAME")
+        envLock.unlock()
+    }
 
     /// Trigger eager loading of cachedEnv in background.
     static func warmUpEnvironment() { _ = cachedEnv }

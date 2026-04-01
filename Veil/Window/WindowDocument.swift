@@ -4,6 +4,7 @@ import MessagePack
 class WindowDocument: NSDocument {
     var profile = Profile.default
     var nvimArgs: [String] = []
+    var nvimEnv: [String: String]?
     var deferDisplay = false
 
     var channel: NvimChannel!
@@ -69,8 +70,11 @@ class WindowDocument: NSDocument {
     private func startNvim() async {
         if !nvimArgs.isEmpty { titleReady = true }
         do {
-            let cwd = ProcessInfo.processInfo.environment["VEIL_CWD"] ?? NSHomeDirectory()
-            try await channel.start(nvimPath: "", cwd: cwd, appName: profile.name, extraArgs: nvimArgs)
+            let cwd = nvimEnv?["PWD"]
+                ?? ProcessInfo.processInfo.environment["VEIL_CWD"]
+                ?? NSHomeDirectory()
+            try await channel.start(nvimPath: "", cwd: cwd, appName: profile.name,
+                                    extraArgs: nvimArgs, env: nvimEnv)
             guard let nvimView else { return }
             let gridSize = nvimView.gridSizeForViewSize(nvimView.bounds.size)
             try await channel.uiAttach(width: gridSize.cols, height: gridSize.rows)

@@ -15,8 +15,10 @@ actor NvimChannel {
         self.eventContinuation = continuation
     }
 
-    func start(nvimPath: String = "", cwd: String = NSHomeDirectory(), appName: String = "nvim", extraArgs: [String] = []) async throws {
-        let proc = NvimProcess(nvimPath: nvimPath, cwd: cwd, appName: appName, extraArgs: extraArgs)
+    func start(nvimPath: String = "", cwd: String = NSHomeDirectory(), appName: String = "nvim",
+                extraArgs: [String] = [], env: [String: String]? = nil) async throws {
+        let proc = NvimProcess(nvimPath: nvimPath, cwd: cwd, appName: appName,
+                               customEnv: env, extraArgs: extraArgs)
         try proc.start()
         self.process = proc
 

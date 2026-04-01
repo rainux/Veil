@@ -51,7 +51,10 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             // with the correct nvim profile (e.g. NVIM_APPNAME=nvim-nvchad gvim).
             let nvimAppName = ProcessInfo.processInfo.environment["NVIM_APPNAME"]
             if !absolutePaths.isEmpty || nvimAppName != nil {
-                var payload: [String: Any] = ["files": absolutePaths]
+                var payload: [String: Any] = [
+                    "files": absolutePaths,
+                    "env": ProcessInfo.processInfo.environment
+                ]
                 if let nvimAppName { payload["nvimAppName"] = nvimAppName }
                 if let data = try? JSONSerialization.data(withJSONObject: payload),
                    let json = String(data: data, encoding: .utf8) {
@@ -193,6 +196,10 @@ class AppDelegate: NSObject, NSApplicationDelegate {
               let data = json.data(using: .utf8),
               let payload = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else { return }
         let files = payload["files"] as? [String] ?? []
+        let env = payload["env"] as? [String: String]
+        if let env {
+            NvimProcess.updateCachedEnv(from: env)
+        }
         // Use forwarded NVIM_APPNAME to select the correct nvim profile,
         // falling back to default if not specified.
         let nvimAppName = payload["nvimAppName"] as? String
@@ -200,6 +207,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         let doc = WindowDocument()
         doc.profile = profile
         doc.nvimArgs = files
+        doc.nvimEnv = env
         doc.deferDisplay = true
         NSDocumentController.shared.addDocument(doc)
         doc.makeWindowControllers()
