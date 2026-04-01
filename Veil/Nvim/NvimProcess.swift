@@ -145,15 +145,18 @@ nonisolated final class NvimProcess: @unchecked Sendable {
         if !nvimPath.isEmpty, FileManager.default.isExecutableFile(atPath: nvimPath) {
             return nvimPath
         }
-        if let path = Self.findInPath("nvim") { return path }
+        // Search using cachedEnv PATH (from user's login shell), not the
+        // process environment PATH (launchd's minimal PATH that lacks
+        // Homebrew, nix, cargo, etc.).
+        if let path = Self.findInPath("nvim", in: Self.cachedEnv["PATH"]) { return path }
         for candidate in ["/opt/homebrew/bin/nvim", "/usr/local/bin/nvim"] {
             if FileManager.default.isExecutableFile(atPath: candidate) { return candidate }
         }
         return "/usr/local/bin/nvim"
     }
 
-    private static func findInPath(_ binary: String) -> String? {
-        guard let pathString = ProcessInfo.processInfo.environment["PATH"] else { return nil }
+    private static func findInPath(_ binary: String, in pathString: String?) -> String? {
+        guard let pathString else { return nil }
         for dir in pathString.split(separator: ":") {
             let candidate = "\(dir)/\(binary)"
             if FileManager.default.isExecutableFile(atPath: candidate) { return candidate }
