@@ -85,46 +85,96 @@ nonisolated final class MetalRenderer {
         let cellH = Float(cellSize.height) * scale
         let topPad = Float(gridTopPadding) * scale
 
-        let emptyRegion = GlyphAtlas.Region(u: 0, v: 0, uMax: 0, vMax: 0)
+        let emptyRegion = GlyphAtlas.Region(u: 0, v: 0, uMax: 0, vMax: 0, drawWidth: 0)
+        let transparentBg = SIMD4<Float>(0, 0, 0, 0)
 
+        // Two-pass rendering (WezTerm-style): backgrounds first, then foreground
+        // glyphs on top. This allows glyphs to overflow into adjacent cells
+        // without being covered by the neighbor's background quad. Nerd font
+        // icons whose bounding box exceeds the cell width are handled as:
+        //   - Followed by space: render at natural width (overflow into space)
+        //   - Followed by content: scale down to fit cell (better than clipping)
+        // Both passes write to the same vertex buffer and are drawn in a single
+        // drawPrimitives call; vertex order guarantees correct layering.
+
+        // Pass 1: Background quads (drawn first, underneath)
         for row in 0..<rows {
             guard cells[row].count >= cols else { continue }
             var col = 0
             while col < cols {
                 let cell = cells[row][col]
                 let attrs = attributes[cell.hlId] ?? CellAttributes()
-
-                let fg = attrs.effectiveForeground(defaultFg: defaultFg, defaultBg: defaultBg)
                 let bg = attrs.effectiveBackground(defaultFg: defaultFg, defaultBg: defaultBg)
-                let bgColor = colorToSIMD4(bg)
 
                 let x = Float(col) * cellW
                 let y = topPad + Float(row) * cellH
 
                 let text = cell.text
                 if text.isEmpty {
-                    // Empty cell = double-width placeholder, skip.
-                    col += 1
-                } else if text == " " {
-                    if bg != defaultBg {
-                        addQuad(to: &vertices, x: x, y: y, w: cellW, h: cellH,
-                                region: emptyRegion, bgColor: bgColor)
-                    }
+                    // Double-width placeholder, skip
                     col += 1
                 } else {
-                    // Check for double-width character (next cell is empty placeholder)
                     let isDoubleWidth = col + 1 < cols && cells[row][col + 1].text.isEmpty
                     let cellCount = isDoubleWidth ? 2 : 1
-                    let quadW = cellW * Float(cellCount)
 
-                    let region = atlas.region(text: text, font: font,
-                                              bold: attrs.bold, italic: attrs.italic,
-                                              fg: fg, bg: bg,
-                                              cellSize: cellSize, cellCount: cellCount)
-                    addQuad(to: &vertices, x: x, y: y, w: quadW, h: cellH,
-                            region: region, bgColor: bgColor)
-                    col += cellCount  // Skip placeholder cell for double-width
+                    if bg != defaultBg {
+                        let quadW = cellW * Float(cellCount)
+                        addQuad(to: &vertices, x: x, y: y, w: quadW, h: cellH,
+                                region: emptyRegion, bgColor: colorToSIMD4(bg))
+                    }
+                    col += cellCount
                 }
+            }
+        }
+
+        // Pass 2: Foreground glyph quads (drawn on top of backgrounds)
+        for row in 0..<rows {
+            guard cells[row].count >= cols else { continue }
+            var col = 0
+            while col < cols {
+                let cell = cells[row][col]
+                let text = cell.text
+
+                if text.isEmpty || text == " " {
+                    col += 1
+                    continue
+                }
+
+                let attrs = attributes[cell.hlId] ?? CellAttributes()
+                let fg = attrs.effectiveForeground(defaultFg: defaultFg, defaultBg: defaultBg)
+
+                let x = Float(col) * cellW
+                let y = topPad + Float(row) * cellH
+
+                let isDoubleWidth = col + 1 < cols && cells[row][col + 1].text.isEmpty
+                let cellCount = isDoubleWidth ? 2 : 1
+                let allocatedW = cellW * Float(cellCount)
+
+                let region = atlas.region(text: text, font: font,
+                                          bold: attrs.bold, italic: attrs.italic,
+                                          fg: fg,
+                                          cellSize: cellSize, cellCount: cellCount)
+
+                let glyphW = region.drawWidth * Float(atlas.scale)
+                if glyphW > allocatedW {
+                    // Glyph wider than allocated cells: overflow or scale down
+                    let nextCol = col + cellCount
+                    let followedBySpace = nextCol < cols && cells[row][nextCol].text == " "
+                    if followedBySpace {
+                        // Overflow into the adjacent space (natural size)
+                        addQuad(to: &vertices, x: x, y: y, w: glyphW, h: cellH,
+                                region: region, bgColor: transparentBg)
+                    } else {
+                        // No room to overflow: squeeze into allocated width
+                        addQuad(to: &vertices, x: x, y: y, w: allocatedW, h: cellH,
+                                region: region, bgColor: transparentBg)
+                    }
+                } else {
+                    addQuad(to: &vertices, x: x, y: y, w: allocatedW, h: cellH,
+                            region: region, bgColor: transparentBg)
+                }
+
+                col += cellCount
             }
         }
 
@@ -284,7 +334,7 @@ nonisolated final class MetalRenderer {
 
         // Draw overlay quad using the overlay texture
         var overlayVertices: [Vertex] = []
-        let region = GlyphAtlas.Region(u: 0, v: 0, uMax: 1, vMax: 1)
+        let region = GlyphAtlas.Region(u: 0, v: 0, uMax: 1, vMax: 1, drawWidth: Float(width))
         addQuad(to: &overlayVertices, x: x, y: y, w: quadW, h: quadH,
                 region: region, bgColor: SIMD4<Float>(0, 0, 0, 0))
 
