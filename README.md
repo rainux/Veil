@@ -10,19 +10,19 @@ Your Neovim config, in proper macOS windows with Metal GPU rendering. Nothing mo
 
 ### Why a GUI instead of the terminal?
 
-- **Cmd+1/2/3 to switch tabs** — in a terminal, these shortcuts conflict with the terminal emulator. Veil gives them directly to Neovim's tabpages, zero configuration.
-- **Cmd+\` to cycle windows** — each window is an independent Neovim session. Instantly switch between projects in the same space, or spread them across spaces and displays.
+- **Cmd+1/2/3 to switch tabs**: in a terminal, these shortcuts conflict with the terminal emulator. Veil gives them directly to Neovim's tabpages, zero configuration.
+- **Cmd+\` to cycle windows**: each window is an independent Neovim session. Instantly switch between projects in the same space, or spread them across spaces and displays.
 
 No terminal keybinding hacks, no tmux layers. Just Neovim in a native macOS window.
 
 ## Features
 
-- **Multi-window** — each window runs an independent Neovim process. Cmd+N to create, Cmd+\` to cycle.
-- **Tabs** — Neovim's native tabline, switchable with Cmd+1 through Cmd+9.
-- **Profile support** — Cmd+Shift+N to choose a different `NVIM_APPNAME` per window.
-- **CJK & IME** — full input method support for Chinese, Japanese, Korean.
-- **Metal rendering** — GPU-accelerated rendering with glyph texture atlas. Entire grid drawn in a single Metal draw call. Falls back to CoreText if Metal is unavailable.
-- **System integration** — standard Edit/File menu actions, trackpad scrolling, window size persistence.
+- **Multi-window**: each window runs an independent Neovim process. Cmd+N to create, Cmd+\` to cycle.
+- **Tabs**: Neovim's native tabline, switchable with Cmd+1 through Cmd+9.
+- **Profile support**: Cmd+Shift+N to choose a different `NVIM_APPNAME` per window.
+- **CJK & IME**: full input method support for Chinese, Japanese, Korean.
+- **Metal rendering**: GPU-accelerated rendering with glyph texture atlas. Entire grid drawn in a single Metal draw call. Falls back to CoreText if Metal is unavailable.
+- **System integration**: standard Edit/File menu actions, trackpad scrolling, window size persistence.
 
 <p align="center">
   <img src="screenshots/main.png" alt="Veil screenshot">
@@ -33,7 +33,7 @@ No terminal keybinding hacks, no tmux layers. Just Neovim in a native macOS wind
 - macOS 14+
 - Neovim 0.10+ (install via `brew install neovim`)
 
-Veil uses your system-installed Neovim. No bundled binary — you always get the latest version you chose to install.
+Veil uses your system-installed Neovim. No bundled binary, you always get the latest version you chose to install.
 
 ## Install
 
@@ -127,12 +127,12 @@ Create shell aliases for configs you use often:
 
 ```bash
 alias gvi='NVIM_APPNAME=nvim-nvchad gvim'
-gvi file.txt                             # just works — fresh launch or new window
+gvi file.txt                             # just works, fresh launch or new window
 ```
 
 ## Acknowledgments
 
-Thanks to [VimR](https://github.com/qvacua/vimr) by Tae Won Ha — Veil learned a great deal from its implementation of the Neovim UI protocol, input handling, and macOS integration.
+Thanks to [VimR](https://github.com/qvacua/vimr) by Tae Won Ha. Veil learned a great deal from its implementation of the Neovim UI protocol, input handling, and macOS integration.
 
 ## License
 
