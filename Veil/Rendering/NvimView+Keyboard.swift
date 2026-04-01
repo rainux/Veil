@@ -156,6 +156,12 @@ extension NvimView {
         markedLayer.contents = nil
         CATransaction.commit()
     }
+    // MARK: - Debug Overlay
+
+    @objc func toggleDebugOverlay(_ sender: Any?) {
+        debugOverlayEnabled.toggle()
+    }
+
     // MARK: - Standard File actions
 
     @objc func saveDocument(_ sender: Any?) {

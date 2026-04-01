@@ -22,6 +22,8 @@ nonisolated final class GlyphAtlas {
         let cellCount: Int
     }
 
+    var regionCount: Int { regions.count }
+
     private let device: MTLDevice
     private(set) var texture: MTLTexture!
     private var regions: [Key: Region] = [:]

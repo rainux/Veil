@@ -72,6 +72,7 @@ nonisolated final class MetalRenderer {
                 gridTopPadding: CGFloat, defaultFg: Int, defaultBg: Int,
                 cursorPosition: Position, cursorShape: ModeInfo.CursorShape,
                 cursorCellPercentage: Int,
+                debugOverlay: String?,
                 in metalLayer: CAMetalLayer) {
         guard let drawable = metalLayer.nextDrawable() else { return }
         guard rows > 0, cols > 0, cells.count >= rows else { return }
@@ -176,6 +177,13 @@ nonisolated final class MetalRenderer {
         encoder.setFragmentTexture(atlas.texture, index: 0)
         encoder.drawPrimitives(type: .triangle, vertexStart: 0, vertexCount: vertices.count)
 
+        if let debugOverlay {
+            renderDebugOverlay(text: debugOverlay, scale: scale,
+                               encoder: encoder,
+                               viewportWidth: Float(metalLayer.drawableSize.width),
+                               viewportHeight: Float(metalLayer.drawableSize.height))
+        }
+
         encoder.endEncoding()
         commandBuffer.present(drawable)
         commandBuffer.commit()
@@ -191,6 +199,98 @@ nonisolated final class MetalRenderer {
         vertices.append(Vertex(position: SIMD2(x + w, y), texCoord: SIMD2(region.uMax, region.v), bgColor: bgColor))
         vertices.append(Vertex(position: SIMD2(x + w, y + h), texCoord: SIMD2(region.uMax, region.vMax), bgColor: bgColor))
         vertices.append(Vertex(position: SIMD2(x, y + h), texCoord: SIMD2(region.u, region.vMax), bgColor: bgColor))
+    }
+
+    // MARK: - Debug Overlay
+
+    private func renderDebugOverlay(text: String, scale: Float,
+                                     encoder: MTLRenderCommandEncoder,
+                                     viewportWidth: Float, viewportHeight: Float) {
+        // Render debug text into a CGImage using CoreText
+        let font = NSFont.monospacedSystemFont(ofSize: 11, weight: .regular)
+        let paragraphStyle = NSMutableParagraphStyle()
+        paragraphStyle.lineSpacing = 2
+        let attrs: [NSAttributedString.Key: Any] = [
+            .font: font,
+            .foregroundColor: NSColor.white,
+            .paragraphStyle: paragraphStyle,
+        ]
+        let attrString = NSAttributedString(string: text, attributes: attrs)
+
+        // Measure text size
+        let textStorage = NSTextStorage(attributedString: attrString)
+        let textContainer = NSTextContainer(size: NSSize(width: 300, height: 500))
+        let layoutManager = NSLayoutManager()
+        layoutManager.addTextContainer(textContainer)
+        textStorage.addLayoutManager(layoutManager)
+        let textRect = layoutManager.usedRect(for: textContainer)
+
+        let padding: CGFloat = 8
+        let width = ceil(textRect.width + padding * 2)
+        let height = ceil(textRect.height + padding * 2)
+        let pixelW = Int(width * CGFloat(scale))
+        let pixelH = Int(height * CGFloat(scale))
+        guard pixelW > 0, pixelH > 0 else { return }
+
+        // Render to CGContext
+        let colorSpace = CGColorSpace(name: CGColorSpace.sRGB)!
+        guard let ctx = CGContext(data: nil, width: pixelW, height: pixelH,
+                                  bitsPerComponent: 8, bytesPerRow: pixelW * 4,
+                                  space: colorSpace,
+                                  bitmapInfo: CGImageAlphaInfo.premultipliedFirst.rawValue | CGBitmapInfo.byteOrder32Little.rawValue)
+        else { return }
+
+        ctx.scaleBy(x: CGFloat(scale), y: CGFloat(scale))
+
+        // Semi-transparent dark background with rounded corners
+        let bgRect = CGRect(x: 0, y: 0, width: width, height: height)
+        ctx.setFillColor(NSColor(white: 0, alpha: 0.7).cgColor)
+        let path = CGPath(roundedRect: bgRect, cornerWidth: 6, cornerHeight: 6, transform: nil)
+        ctx.addPath(path)
+        ctx.fillPath()
+
+        // Draw text (flip coordinates for NSAttributedString drawing)
+        ctx.saveGState()
+        ctx.translateBy(x: 0, y: height)
+        ctx.scaleBy(x: 1, y: -1)
+        let drawRect = CGRect(x: padding, y: padding, width: textRect.width, height: textRect.height)
+        attrString.draw(in: drawRect)
+        ctx.restoreGState()
+
+        guard let image = ctx.makeImage() else { return }
+
+        // Create temporary texture from rendered image
+        let texDesc = MTLTextureDescriptor.texture2DDescriptor(pixelFormat: .bgra8Unorm,
+                                                                width: pixelW, height: pixelH,
+                                                                mipmapped: false)
+        texDesc.usage = .shaderRead
+        texDesc.storageMode = .managed
+        guard let texture = device.makeTexture(descriptor: texDesc),
+              let data = image.dataProvider?.data,
+              let bytes = CFDataGetBytePtr(data) else { return }
+        texture.replace(region: MTLRegionMake2D(0, 0, pixelW, pixelH),
+                        mipmapLevel: 0, withBytes: bytes, bytesPerRow: pixelW * 4)
+
+        // Position at top-right with margin
+        let margin: Float = 10 * scale
+        let quadW = Float(width) * scale
+        let quadH = Float(height) * scale
+        let x = viewportWidth - quadW - margin
+        let y = margin
+
+        // Draw overlay quad using the overlay texture
+        var overlayVertices: [Vertex] = []
+        let region = GlyphAtlas.Region(u: 0, v: 0, uMax: 1, vMax: 1)
+        addQuad(to: &overlayVertices, x: x, y: y, w: quadW, h: quadH,
+                region: region, bgColor: SIMD4<Float>(0, 0, 0, 0))
+
+        let bufferSize = overlayVertices.count * MemoryLayout<Vertex>.stride
+        guard let vertexBuffer = device.makeBuffer(bytes: overlayVertices, length: bufferSize,
+                                                    options: .storageModeShared) else { return }
+
+        encoder.setVertexBuffer(vertexBuffer, offset: 0, index: 0)
+        encoder.setFragmentTexture(texture, index: 0)
+        encoder.drawPrimitives(type: .triangle, vertexStart: 0, vertexCount: overlayVertices.count)
     }
 
     private func colorToSIMD4(_ rgb: Int) -> SIMD4<Float> {

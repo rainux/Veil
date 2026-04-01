@@ -76,6 +76,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
         Task.detached { NvimProcess.warmUpEnvironment() }
         addProfilePickerMenuItem()
+        addDebugOverlayMenuItem()
         NSApp.activate(ignoringOtherApps: true)
 
         // Defer default window creation — if openFiles: is called (Finder launch),
@@ -215,6 +216,16 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     // MARK: - Menu Setup
+
+    private func addDebugOverlayMenuItem() {
+        guard let mainMenu = NSApp.mainMenu,
+              let viewMenu = mainMenu.items.first(where: { $0.title == "View" })?.submenu
+        else { return }
+        viewMenu.addItem(NSMenuItem.separator())
+        viewMenu.addItem(NSMenuItem(title: "Toggle Debug Overlay",
+                                     action: #selector(NvimView.toggleDebugOverlay(_:)),
+                                     keyEquivalent: ""))
+    }
 
     private func addProfilePickerMenuItem() {
         guard let mainMenu = NSApp.mainMenu,

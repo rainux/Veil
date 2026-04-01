@@ -38,6 +38,12 @@ final class NvimView: NSView {
     var metalLayer: CAMetalLayer?
     var glyphAtlas: GlyphAtlas?
 
+    // MARK: - Debug overlay
+
+    var debugOverlayEnabled = false
+    private var lastRenderTime: CFAbsoluteTime = 0
+    private var currentFPS: Int = 0
+
     // MARK: - Private
 
     let glyphCache: GlyphCache
@@ -131,6 +137,22 @@ final class NvimView: NSView {
             CATransaction.commit()
             glyphAtlas.scale = metalLayer.contentsScale
 
+            // FPS tracking
+            let now = CFAbsoluteTimeGetCurrent()
+            if lastRenderTime > 0 {
+                let delta = now - lastRenderTime
+                if delta > 0 { currentFPS = Int(1.0 / delta) }
+            }
+            lastRenderTime = now
+
+            // Build debug overlay text if enabled
+            let debugText: String? = debugOverlayEnabled ? """
+            Renderer: Metal (\(metalRenderer.device.name))
+            FPS: \(currentFPS)
+            Grid: \(grid.size.cols)×\(grid.size.rows)
+            Atlas: \(glyphAtlas.regionCount)
+            """ : nil
+
             metalRenderer.render(
                 cells: grid.cells, attributes: grid.attributes,
                 rows: grid.size.rows, cols: grid.size.cols,
@@ -140,6 +162,7 @@ final class NvimView: NSView {
                 cursorPosition: grid.cursorPosition,
                 cursorShape: currentCursorShape,
                 cursorCellPercentage: currentCursorCellPercentage,
+                debugOverlay: debugText,
                 in: metalLayer
             )
         } else {

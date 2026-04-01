@@ -58,8 +58,7 @@ class WindowController: NSWindowController, NSWindowDelegate {
     }
 
     func updateTitle(_ title: String) {
-        let renderer = nvimView.metalRenderer != nil ? "Metal" : "CoreText"
-        customTitleLabel?.stringValue = "\(title) [\(renderer)]"
+        customTitleLabel?.stringValue = title
         window?.title = title
     }
 
