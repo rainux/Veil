@@ -76,6 +76,8 @@ Veil reads your existing Neovim configuration (`~/.config/nvim/`). Set `guifont`
 vim.o.guifont = 'Maple Mono NF CN:h16'
 ```
 
+Setting a [Nerd Font](https://www.nerdfonts.com/) as your `guifont` is the most reliable way to get statusline icons and devicons working. If you don't, Veil will automatically search for any installed Nerd Font on your system and use it as a fallback for icon glyphs, similar to how terminals like WezTerm and Kitty handle font fallback.
+
 ### Keyboard
 
 These Cmd+key shortcuts are handled by Veil:

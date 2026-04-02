@@ -41,6 +41,7 @@ nonisolated final class GlyphAtlas {
         self.atlasHeight = size
         self.texture = createTexture(size: size)
         self.nextX = 1  // Reserve pixel (0,0) as transparent sentinel for empty cells
+        FontFallback.probe()
     }
 
     func region(text: String, font: NSFont, bold: Bool, italic: Bool,
@@ -61,6 +62,8 @@ nonisolated final class GlyphAtlas {
             let descriptor = drawFont.fontDescriptor.withSymbolicTraits(.italic)
             drawFont = NSFont(descriptor: descriptor, size: drawFont.pointSize) ?? drawFont
         }
+
+        drawFont = FontFallback.resolveFont(drawFont, for: text)
 
         // Measure actual glyph ink width. Nerd font icons often have bounding
         // boxes wider than the cell width neovim allocates. Rendering at the

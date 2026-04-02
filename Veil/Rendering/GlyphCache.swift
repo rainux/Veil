@@ -43,6 +43,7 @@ nonisolated final class GlyphCache: @unchecked Sendable {
     init(font: NSFont, cellSize: CGSize) {
         self.font = font
         self.cellSize = cellSize
+        FontFallback.probe()
     }
 
     func get(text: String, attrs: CellAttributes, defaultFg: Int, defaultBg: Int, cellCount: Int = 1) -> CGImage {
@@ -108,6 +109,8 @@ nonisolated final class GlyphCache: @unchecked Sendable {
             let descriptor = drawFont.fontDescriptor.withSymbolicTraits(.italic)
             drawFont = NSFont(descriptor: descriptor, size: drawFont.pointSize) ?? drawFont
         }
+
+        drawFont = FontFallback.resolveFont(drawFont, for: text)
 
         // Draw text via CoreText
         let fgColor = NSColor(rgb: fg)
