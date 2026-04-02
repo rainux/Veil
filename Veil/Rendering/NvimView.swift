@@ -60,7 +60,7 @@ final class NvimView: NSView {
     // MARK: - Init
 
     override init(frame: NSRect) {
-        let defaultFont = NSFont.monospacedSystemFont(ofSize: 14, weight: .regular)
+        let defaultFont = NSFont.monospacedSystemFont(ofSize: 16, weight: .regular)
         self.gridFont = defaultFont
         let size = NvimView.computeCellSize(for: defaultFont)
         self.cellSize = size
@@ -72,7 +72,7 @@ final class NvimView: NSView {
     }
 
     required init?(coder: NSCoder) {
-        let defaultFont = NSFont.monospacedSystemFont(ofSize: 14, weight: .regular)
+        let defaultFont = NSFont.monospacedSystemFont(ofSize: 16, weight: .regular)
         self.gridFont = defaultFont
         let size = NvimView.computeCellSize(for: defaultFont)
         self.cellSize = size
@@ -260,7 +260,7 @@ final class NvimView: NSView {
     func parseAndSetGuifont(_ guifont: String) {
         let parts = guifont.split(separator: ":")
         guard let fontName = parts.first.map(String.init) else { return }
-        var size: CGFloat = 14
+        var size: CGFloat = 16
         for part in parts.dropFirst() {
             if part.hasPrefix("h"), let s = Double(part.dropFirst()) {
                 size = CGFloat(s)
