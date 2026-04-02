@@ -60,7 +60,8 @@ final class Grid {
         guard row >= 0 && row < size.rows else { return }
         var col = colStart
         for cellData in data {
-            let count = cellData.repeats > 0 ? cellData.repeats : 1
+            let count = cellData.repeats
+            guard count > 0 else { continue }
             let utf16Len = cellData.text.utf16.count
             let cell = Cell(text: cellData.text, hlId: cellData.hlId, utf16Length: max(utf16Len, 1))
             for _ in 0..<count {
@@ -142,17 +143,17 @@ final class Grid {
             switch k {
             case "foreground": fg = v as? Int ?? -1
             case "background": bg = v as? Int ?? -1
-            case "special":    sp = v as? Int ?? -1
-            case "bold":       bold = v as? Bool ?? false
-            case "italic":     italic = v as? Bool ?? false
-            case "underline":  underline = v as? Bool ?? false
-            case "undercurl":  undercurl = v as? Bool ?? false
+            case "special": sp = v as? Int ?? -1
+            case "bold": bold = v as? Bool ?? false
+            case "italic": italic = v as? Bool ?? false
+            case "underline": underline = v as? Bool ?? false
+            case "undercurl": undercurl = v as? Bool ?? false
             case "underdouble": underdouble = v as? Bool ?? false
             case "underdotted": underdotted = v as? Bool ?? false
             case "underdashed": underdashed = v as? Bool ?? false
             case "strikethrough": strikethrough = v as? Bool ?? false
-            case "reverse":    reverse = v as? Bool ?? false
-            case "blend":      blend = v as? Int ?? 0
+            case "reverse": reverse = v as? Bool ?? false
+            case "blend": blend = v as? Int ?? 0
             default: break
             }
         }
