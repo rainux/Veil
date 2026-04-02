@@ -167,6 +167,11 @@ class WindowDocument: NSDocument, NvimViewDelegate {
     }
 
     func redraw() {
+        // Prevent white flash on initial window creation: only allow redraw
+        // after the event loop has rendered at least once. windowDidBecomeKey
+        // fires before neovim sends grid_resize, and the empty grid defaults
+        // to a white background which cause white flash.
+        guard grid.size != .zero else { return }
         nvimView?.render(grid: grid)
     }
 
