@@ -16,7 +16,10 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     // when macOS detects file arguments matching registered document types.
     private(set) lazy var parsedArgs: CliArgParser.Result = CliArgParser.parse(
         ProcessInfo.processInfo.arguments)
-    private var initialCliArgs: [String] {
+    /// Arguments to forward to nvim, parsed from the CLI invocation.
+    /// Veil-specific flags (e.g. --veil-renderer) are already stripped by
+    /// CliArgParser; what remains are nvim flags (-d, -p) and file paths.
+    private var initialNvimArgs: [String] {
         get { parsedArgs.nvimArgs }
         set { parsedArgs.nvimArgs = newValue }
     }
@@ -65,9 +68,9 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     func application(_ sender: NSApplication, openFiles filenames: [String]) {
-        if !initialCliArgs.isEmpty {
+        if !initialNvimArgs.isEmpty {
             // Cold start: macOS detected file arguments matching registered
-            // document types. The same files are already in initialCliArgs
+            // document types. The same files are already in initialNvimArgs
             // (parsed by CliArgParser), which also preserves nvim flags like
             // -d that macOS strips. Let the deferred createWindow() handle
             // everything so flags aren't lost.
@@ -157,9 +160,9 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         let doc = WindowDocument()
         doc.profile = profile
         doc.preferredRenderer = preferredRenderer
-        if !initialCliArgs.isEmpty {
-            doc.nvimArgs = initialCliArgs
-            initialCliArgs = []
+        if !initialNvimArgs.isEmpty {
+            doc.nvimArgs = initialNvimArgs
+            initialNvimArgs = []
         }
         NSDocumentController.shared.addDocument(doc)
         doc.makeWindowControllers()
@@ -173,15 +176,12 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     /// file paths, the full shell environment, and NVIM_APPNAME so the
     /// existing instance can open a new window with the correct nvim profile.
     private func forwardToExistingInstance(_ existing: NSRunningApplication) -> Never {
-        // Resolve relative paths before forwarding — the existing instance
-        // has a different cwd, so "Makefile" would resolve to the wrong file.
-        let absolutePaths = initialCliArgs.map { URL(fileURLWithPath: $0).path }
         // Forward NVIM_APPNAME so the existing instance opens the window
         // with the correct nvim profile (e.g. NVIM_APPNAME=nvim-nvchad gvim).
         let nvimAppName = ProcessInfo.processInfo.environment["NVIM_APPNAME"]
-        if !absolutePaths.isEmpty || nvimAppName != nil {
+        if !initialNvimArgs.isEmpty || nvimAppName != nil {
             var payload: [String: Any] = [
-                "files": absolutePaths,
+                "nvimArgs": initialNvimArgs,
                 "env": ProcessInfo.processInfo.environment,
             ]
             if let nvimAppName { payload["nvimAppName"] = nvimAppName }
@@ -216,7 +216,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             let data = json.data(using: .utf8),
             let payload = try? JSONSerialization.jsonObject(with: data) as? [String: Any]
         else { return }
-        let files = payload["files"] as? [String] ?? []
+        let nvimArgs = payload["nvimArgs"] as? [String] ?? []
         let env = payload["env"] as? [String: String]
         if let env {
             NvimProcess.updateCachedEnv(from: env)
@@ -228,7 +228,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         let doc = WindowDocument()
         doc.profile = profile
         doc.preferredRenderer = preferredRenderer
-        doc.nvimArgs = files
+        doc.nvimArgs = nvimArgs
         doc.nvimEnv = env
         NSDocumentController.shared.addDocument(doc)
         doc.makeWindowControllers()
