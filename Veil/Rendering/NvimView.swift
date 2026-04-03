@@ -128,6 +128,10 @@ final class NvimView: NSView {
         // Update state
         defaultFg = grid.defaultForeground
         defaultBg = grid.defaultBackground
+        // Lazy recomputation: only pay the cost of flatCharIndices when
+        // we actually need them (at render time for IME), not on every
+        // cell update or scroll during the event loop.
+        grid.ensureAllFlatCharIndices()
         flatCharIndices = grid.flatCharIndices
 
         if let metalRenderer, let metalLayer, let glyphAtlas {

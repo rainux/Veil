@@ -16,7 +16,13 @@ final class Grid {
     var defaultSpecial: Int
 
     /// Per-row array mapping column index to UTF-16 flat char index, for IME support.
+    /// Rows are lazily recomputed on access; see ensureFlatCharIndices(row:).
     var flatCharIndices: [[Int]]
+
+    /// Tracks which rows need flatCharIndices recomputation.
+    /// Indices are lazily recomputed only when accessed (for IME cursor positioning),
+    /// avoiding redundant work during bulk cell updates and scrolling.
+    private var flatCharDirtyRows = IndexSet()
 
     // MARK: - Init
 
@@ -54,7 +60,9 @@ final class Grid {
         }
         cells = newCells
         size = newSize
-        recomputeFlatCharIndices()
+        // Allocate flatCharIndices to correct size but defer computation
+        flatCharIndices = Array(repeating: [], count: height)
+        flatCharDirtyRows = IndexSet(0..<height)
         dirtyRows = IndexSet(0..<height)
     }
 
@@ -73,7 +81,7 @@ final class Grid {
             }
         }
         dirtyRows.insert(row)
-        recomputeFlatCharIndices(row: row)
+        flatCharDirtyRows.insert(row)
     }
 
     func clear() {
@@ -82,7 +90,7 @@ final class Grid {
             cells[r] = emptyRow
         }
         dirtyRows = IndexSet(0..<size.rows)
-        recomputeFlatCharIndices()
+        flatCharDirtyRows = IndexSet(0..<size.rows)
     }
 
     func cursorGoto(row: Int, col: Int) {
@@ -109,12 +117,12 @@ final class Grid {
                 guard srcRow <= bot else { continue }
                 cells[destRow].replaceSubrange(colRange, with: cells[srcRow][colRange])
                 dirtyRows.insert(destRow)
-                recomputeFlatCharIndices(row: destRow)
+                flatCharDirtyRows.insert(destRow)
             }
             for r in (bot - rows + 1)...bot {
                 for col in colRange { cells[r][col] = .empty }
                 dirtyRows.insert(r)
-                recomputeFlatCharIndices(row: r)
+                flatCharDirtyRows.insert(r)
             }
         } else {
             let absRows = -rows
@@ -123,12 +131,12 @@ final class Grid {
                 guard srcRow >= top else { continue }
                 cells[destRow].replaceSubrange(colRange, with: cells[srcRow][colRange])
                 dirtyRows.insert(destRow)
-                recomputeFlatCharIndices(row: destRow)
+                flatCharDirtyRows.insert(destRow)
             }
             for r in top..<(top + absRows) {
                 for col in colRange { cells[r][col] = .empty }
                 dirtyRows.insert(r)
-                recomputeFlatCharIndices(row: r)
+                flatCharDirtyRows.insert(r)
             }
         }
     }
@@ -213,21 +221,34 @@ final class Grid {
         }
     }
 
-    // MARK: - Private helpers
+    // MARK: - Lazy flatCharIndices
 
-    private func recomputeFlatCharIndices() {
-        flatCharIndices = cells.enumerated().map { _, row in
-            computeIndicesForRow(row)
+    /// Recompute all stale flatCharIndices rows at once.
+    /// Called before copying to NvimView for IME support.
+    func ensureAllFlatCharIndices() {
+        guard !flatCharDirtyRows.isEmpty else { return }
+        for row in flatCharDirtyRows {
+            guard row < size.rows else { continue }
+            while flatCharIndices.count <= row {
+                flatCharIndices.append([])
+            }
+            flatCharIndices[row] = computeIndicesForRow(cells[row])
         }
+        flatCharDirtyRows.removeAll()
     }
 
-    private func recomputeFlatCharIndices(row: Int) {
+    /// Recompute flatCharIndices for a single row if it was marked stale.
+    func ensureFlatCharIndices(row: Int) {
+        guard flatCharDirtyRows.contains(row) else { return }
         guard row >= 0 && row < size.rows else { return }
         while flatCharIndices.count <= row {
             flatCharIndices.append([])
         }
         flatCharIndices[row] = computeIndicesForRow(cells[row])
+        flatCharDirtyRows.remove(row)
     }
+
+    // MARK: - Private helpers
 
     private func computeIndicesForRow(_ row: [Cell]) -> [Int] {
         var indices: [Int] = []
