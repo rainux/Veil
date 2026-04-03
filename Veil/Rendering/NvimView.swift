@@ -160,6 +160,7 @@ final class NvimView: NSView {
             metalRenderer.render(
                 cells: grid.cells, attributes: grid.attributes,
                 rows: grid.size.rows, cols: grid.size.cols,
+                dirtyRows: grid.dirtyRows,
                 atlas: glyphAtlas, font: gridFont,
                 cellSize: cellSize, gridTopPadding: Self.gridTopPadding,
                 defaultFg: defaultFg, defaultBg: defaultBg,

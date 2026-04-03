@@ -7,12 +7,26 @@ nonisolated final class MetalRenderer {
     struct Vertex {
         var position: SIMD2<Float>  // pixel position
         var texCoord: SIMD2<Float>  // UV in atlas
+        var fgColor: SIMD4<Float>  // foreground color (applied to glyph alpha mask)
         var bgColor: SIMD4<Float>  // background color
     }
 
     let device: MTLDevice
     let commandQueue: MTLCommandQueue
     let pipelineState: MTLRenderPipelineState
+
+    // Pre-allocated vertex buffer to avoid per-frame MTLBuffer creation.
+    // Rewritten each frame via contents() pointer instead of makeBuffer().
+    private var vertexBuffer: MTLBuffer?
+    private var vertexBufferCapacity: Int = 0
+
+    // Persistent per-row vertex data for dirty-region rendering.
+    // Only rows marked dirty are rebuilt; unchanged rows reuse cached vertices.
+    // Each row's background and foreground vertices are stored separately.
+    private var rowBackgroundVertices: [[Vertex]] = []
+    private var rowForegroundVertices: [[Vertex]] = []
+    private var cachedRows: Int = 0
+    private var cachedCols: Int = 0
 
     init() throws {
         guard let device = MTLCreateSystemDefaultDevice() else {
@@ -50,12 +64,16 @@ nonisolated final class MetalRenderer {
         vertexDescriptor.attributes[1].format = .float2
         vertexDescriptor.attributes[1].offset = MemoryLayout<Float>.size * 2
         vertexDescriptor.attributes[1].bufferIndex = 0
-        // bgColor: float4
+        // fgColor: float4 (foreground color for glyph colorization in shader)
         vertexDescriptor.attributes[2].format = .float4
         vertexDescriptor.attributes[2].offset = MemoryLayout<Float>.size * 4
         vertexDescriptor.attributes[2].bufferIndex = 0
-        // stride: 2 + 2 + 4 = 8 floats
-        vertexDescriptor.layouts[0].stride = MemoryLayout<Float>.size * 8
+        // bgColor: float4
+        vertexDescriptor.attributes[3].format = .float4
+        vertexDescriptor.attributes[3].offset = MemoryLayout<Float>.size * 8
+        vertexDescriptor.attributes[3].bufferIndex = 0
+        // stride: 2 + 2 + 4 + 4 = 12 floats
+        vertexDescriptor.layouts[0].stride = MemoryLayout<Float>.size * 12
         vertexDescriptor.layouts[0].stepRate = 1
         vertexDescriptor.layouts[0].stepFunction = .perVertex
 
@@ -69,6 +87,7 @@ nonisolated final class MetalRenderer {
     func render(
         cells: [[Cell]], attributes: [Int: CellAttributes],
         rows: Int, cols: Int,
+        dirtyRows: IndexSet,
         atlas: GlyphAtlas, font: NSFont, cellSize: CGSize,
         gridTopPadding: CGFloat, defaultFg: Int, defaultBg: Int,
         cursorPosition: Position, cursorShape: ModeInfo.CursorShape,
@@ -79,113 +98,39 @@ nonisolated final class MetalRenderer {
         guard let drawable = metalLayer.nextDrawable() else { return }
         guard rows > 0, cols > 0, cells.count >= rows else { return }
 
-        var vertices: [Vertex] = []
-        vertices.reserveCapacity(rows * cols * 6)
-
         let scale = Float(metalLayer.contentsScale)
         let cellW = Float(cellSize.width) * scale
         let cellH = Float(cellSize.height) * scale
         let topPad = Float(gridTopPadding) * scale
 
+        // Resize per-row caches when grid dimensions change
+        resizeRowCaches(rows: rows, cols: cols)
+
+        // Rebuild vertex data only for rows that Grid marked as dirty.
+        // Cursor is drawn as an independent quad, so cursor movement alone
+        // does not require rebuilding row vertices.
+        for row in dirtyRows {
+            guard row < rows, cells[row].count >= cols else { continue }
+            rebuildRowVertices(
+                row: row, cells: cells[row], attributes: attributes,
+                cols: cols, atlas: atlas, font: font, cellSize: cellSize,
+                cellW: cellW, cellH: cellH, topPad: topPad, scale: scale,
+                defaultFg: defaultFg, defaultBg: defaultBg)
+        }
+
+        // Assemble final vertex array: all backgrounds first, then all foreground
+        // glyphs, so glyph quads always draw on top of background quads.
+        var vertices: [Vertex] = []
+        vertices.reserveCapacity(rows * cols * 6)
+        for row in 0..<rows {
+            vertices.append(contentsOf: rowBackgroundVertices[row])
+        }
+        for row in 0..<rows {
+            vertices.append(contentsOf: rowForegroundVertices[row])
+        }
+
+        // Cursor quad (always on top of everything)
         let emptyRegion = GlyphAtlas.Region(u: 0, v: 0, uMax: 0, vMax: 0, drawWidth: 0)
-        let transparentBg = SIMD4<Float>(0, 0, 0, 0)
-
-        // Two-pass rendering (WezTerm-style): backgrounds first, then foreground
-        // glyphs on top. This allows glyphs to overflow into adjacent cells
-        // without being covered by the neighbor's background quad. Nerd font
-        // icons whose bounding box exceeds the cell width are handled as:
-        //   - Followed by space: render at natural width (overflow into space)
-        //   - Followed by content: scale down to fit cell (better than clipping)
-        // Both passes write to the same vertex buffer and are drawn in a single
-        // drawPrimitives call; vertex order guarantees correct layering.
-
-        // Pass 1: Background quads (drawn first, underneath)
-        for row in 0..<rows {
-            guard cells[row].count >= cols else { continue }
-            var col = 0
-            while col < cols {
-                let cell = cells[row][col]
-                let attrs = attributes[cell.hlId] ?? CellAttributes()
-                let bg = attrs.effectiveBackground(defaultFg: defaultFg, defaultBg: defaultBg)
-
-                let x = Float(col) * cellW
-                let y = topPad + Float(row) * cellH
-
-                let text = cell.text
-                if text.isEmpty {
-                    // Double-width placeholder, skip
-                    col += 1
-                } else {
-                    let isDoubleWidth = col + 1 < cols && cells[row][col + 1].text.isEmpty
-                    let cellCount = isDoubleWidth ? 2 : 1
-
-                    if bg != defaultBg {
-                        let quadW = cellW * Float(cellCount)
-                        addQuad(
-                            to: &vertices, x: x, y: y, w: quadW, h: cellH,
-                            region: emptyRegion, bgColor: colorToSIMD4(bg))
-                    }
-                    col += cellCount
-                }
-            }
-        }
-
-        // Pass 2: Foreground glyph quads (drawn on top of backgrounds)
-        for row in 0..<rows {
-            guard cells[row].count >= cols else { continue }
-            var col = 0
-            while col < cols {
-                let cell = cells[row][col]
-                let text = cell.text
-
-                if text.isEmpty || text == " " {
-                    col += 1
-                    continue
-                }
-
-                let attrs = attributes[cell.hlId] ?? CellAttributes()
-                let fg = attrs.effectiveForeground(defaultFg: defaultFg, defaultBg: defaultBg)
-
-                let x = Float(col) * cellW
-                let y = topPad + Float(row) * cellH
-
-                let isDoubleWidth = col + 1 < cols && cells[row][col + 1].text.isEmpty
-                let cellCount = isDoubleWidth ? 2 : 1
-                let allocatedW = cellW * Float(cellCount)
-
-                let region = atlas.region(
-                    text: text, font: font,
-                    bold: attrs.bold, italic: attrs.italic,
-                    fg: fg,
-                    cellSize: cellSize, cellCount: cellCount)
-
-                let glyphW = region.drawWidth * Float(atlas.scale)
-                if glyphW > allocatedW {
-                    // Glyph wider than allocated cells: overflow or scale down
-                    let nextCol = col + cellCount
-                    let followedBySpace = nextCol < cols && cells[row][nextCol].text == " "
-                    if followedBySpace {
-                        // Overflow into the adjacent space (natural size)
-                        addQuad(
-                            to: &vertices, x: x, y: y, w: glyphW, h: cellH,
-                            region: region, bgColor: transparentBg)
-                    } else {
-                        // No room to overflow: squeeze into allocated width
-                        addQuad(
-                            to: &vertices, x: x, y: y, w: allocatedW, h: cellH,
-                            region: region, bgColor: transparentBg)
-                    }
-                } else {
-                    addQuad(
-                        to: &vertices, x: x, y: y, w: allocatedW, h: cellH,
-                        region: region, bgColor: transparentBg)
-                }
-
-                col += cellCount
-            }
-        }
-
-        // Cursor quad
         let cx = Float(cursorPosition.col) * cellW
         var cy = topPad + Float(cursorPosition.row) * cellH
         var cw = cellW
@@ -208,12 +153,9 @@ nonisolated final class MetalRenderer {
 
         guard !vertices.isEmpty else { return }
 
-        let bufferSize = vertices.count * MemoryLayout<Vertex>.stride
-        guard
-            let vertexBuffer = device.makeBuffer(
-                bytes: vertices, length: bufferSize,
-                options: .storageModeShared)
-        else { return }
+        guard let vertexBuffer = ensureVertexBuffer(vertexCount: vertices.count) else { return }
+        let byteCount = vertices.count * MemoryLayout<Vertex>.stride
+        memcpy(vertexBuffer.contents(), &vertices, byteCount)
 
         var uniforms = SIMD2<Float>(
             Float(metalLayer.drawableSize.width),
@@ -256,31 +198,29 @@ nonisolated final class MetalRenderer {
     private func addQuad(
         to vertices: inout [Vertex],
         x: Float, y: Float, w: Float, h: Float,
-        region: GlyphAtlas.Region, bgColor: SIMD4<Float>
+        region: GlyphAtlas.Region,
+        fgColor: SIMD4<Float> = SIMD4<Float>(0, 0, 0, 0),
+        bgColor: SIMD4<Float>
     ) {
         // Two triangles forming a quad
-        vertices.append(
-            Vertex(position: SIMD2(x, y), texCoord: SIMD2(region.u, region.v), bgColor: bgColor))
-        vertices.append(
-            Vertex(
-                position: SIMD2(x + w, y), texCoord: SIMD2(region.uMax, region.v), bgColor: bgColor)
-        )
-        vertices.append(
-            Vertex(
-                position: SIMD2(x, y + h), texCoord: SIMD2(region.u, region.vMax), bgColor: bgColor)
-        )
-        vertices.append(
-            Vertex(
-                position: SIMD2(x + w, y), texCoord: SIMD2(region.uMax, region.v), bgColor: bgColor)
-        )
-        vertices.append(
-            Vertex(
-                position: SIMD2(x + w, y + h), texCoord: SIMD2(region.uMax, region.vMax),
-                bgColor: bgColor))
-        vertices.append(
-            Vertex(
-                position: SIMD2(x, y + h), texCoord: SIMD2(region.u, region.vMax), bgColor: bgColor)
-        )
+        let v0 = Vertex(
+            position: SIMD2(x, y), texCoord: SIMD2(region.u, region.v), fgColor: fgColor,
+            bgColor: bgColor)
+        let v1 = Vertex(
+            position: SIMD2(x + w, y), texCoord: SIMD2(region.uMax, region.v), fgColor: fgColor,
+            bgColor: bgColor)
+        let v2 = Vertex(
+            position: SIMD2(x, y + h), texCoord: SIMD2(region.u, region.vMax), fgColor: fgColor,
+            bgColor: bgColor)
+        let v3 = Vertex(
+            position: SIMD2(x + w, y + h), texCoord: SIMD2(region.uMax, region.vMax),
+            fgColor: fgColor, bgColor: bgColor)
+        vertices.append(v0)
+        vertices.append(v1)
+        vertices.append(v2)
+        vertices.append(v1)
+        vertices.append(v3)
+        vertices.append(v2)
     }
 
     // MARK: - Debug Overlay
@@ -390,6 +330,132 @@ nonisolated final class MetalRenderer {
         encoder.setVertexBuffer(vertexBuffer, offset: 0, index: 0)
         encoder.setFragmentTexture(texture, index: 0)
         encoder.drawPrimitives(type: .triangle, vertexStart: 0, vertexCount: overlayVertices.count)
+    }
+
+    // MARK: - Dirty-region helpers
+
+    /// Reset per-row vertex caches when the grid dimensions change.
+    private func resizeRowCaches(rows: Int, cols: Int) {
+        guard rows != cachedRows || cols != cachedCols else { return }
+        rowBackgroundVertices = Array(repeating: [], count: rows)
+        rowForegroundVertices = Array(repeating: [], count: rows)
+        cachedRows = rows
+        cachedCols = cols
+    }
+
+    /// Rebuild background and foreground vertices for a single row.
+    /// Called only for dirty rows, avoiding redundant work on unchanged content.
+    ///
+    /// Two-pass rendering (WezTerm-style): backgrounds first, then foreground
+    /// glyphs on top. This allows glyphs to overflow into adjacent cells
+    /// without being covered by the neighbor's background quad. Nerd font
+    /// icons whose bounding box exceeds the cell width are handled as:
+    ///   - Followed by space: render at natural width (overflow into space)
+    ///   - Followed by content: scale down to fit cell (better than clipping)
+    private func rebuildRowVertices(
+        row: Int, cells: [Cell], attributes: [Int: CellAttributes],
+        cols: Int, atlas: GlyphAtlas, font: NSFont, cellSize: CGSize,
+        cellW: Float, cellH: Float, topPad: Float, scale: Float,
+        defaultFg: Int, defaultBg: Int
+    ) {
+        let emptyRegion = GlyphAtlas.Region(u: 0, v: 0, uMax: 0, vMax: 0, drawWidth: 0)
+        let transparentBg = SIMD4<Float>(0, 0, 0, 0)
+        let y = topPad + Float(row) * cellH
+
+        // Background pass
+        var bgVerts: [Vertex] = []
+        var col = 0
+        while col < cols {
+            let cell = cells[col]
+            let attrs = attributes[cell.hlId] ?? CellAttributes()
+            let bg = attrs.effectiveBackground(defaultFg: defaultFg, defaultBg: defaultBg)
+            let x = Float(col) * cellW
+            let text = cell.text
+            if text.isEmpty {
+                // Double-width placeholder, skip
+                col += 1
+            } else {
+                let isDoubleWidth = col + 1 < cols && cells[col + 1].text.isEmpty
+                let cellCount = isDoubleWidth ? 2 : 1
+                if bg != defaultBg {
+                    let quadW = cellW * Float(cellCount)
+                    addQuad(
+                        to: &bgVerts, x: x, y: y, w: quadW, h: cellH,
+                        region: emptyRegion, bgColor: colorToSIMD4(bg))
+                }
+                col += cellCount
+            }
+        }
+        rowBackgroundVertices[row] = bgVerts
+
+        // Foreground glyph pass: atlas stores white alpha masks, so we pass
+        // the per-cell foreground color for the shader to apply
+        var fgVerts: [Vertex] = []
+        col = 0
+        while col < cols {
+            let cell = cells[col]
+            let text = cell.text
+            if text.isEmpty || text == " " {
+                col += 1
+                continue
+            }
+
+            let attrs = attributes[cell.hlId] ?? CellAttributes()
+            let fg = attrs.effectiveForeground(defaultFg: defaultFg, defaultBg: defaultBg)
+            let fgSIMD = colorToSIMD4(fg)
+            let x = Float(col) * cellW
+
+            let isDoubleWidth = col + 1 < cols && cells[col + 1].text.isEmpty
+            let cellCount = isDoubleWidth ? 2 : 1
+            let allocatedW = cellW * Float(cellCount)
+
+            let region = atlas.region(
+                text: text, font: font,
+                bold: attrs.bold, italic: attrs.italic,
+                cellSize: cellSize, cellCount: cellCount)
+
+            let glyphW = region.drawWidth * Float(atlas.scale)
+            if glyphW > allocatedW {
+                // Glyph wider than allocated cells: overflow or scale down
+                let nextCol = col + cellCount
+                let followedBySpace = nextCol < cols && cells[nextCol].text == " "
+                if followedBySpace {
+                    // Overflow into the adjacent space (natural size)
+                    addQuad(
+                        to: &fgVerts, x: x, y: y, w: glyphW, h: cellH,
+                        region: region, fgColor: fgSIMD, bgColor: transparentBg)
+                } else {
+                    // No room to overflow: squeeze into allocated width
+                    addQuad(
+                        to: &fgVerts, x: x, y: y, w: allocatedW, h: cellH,
+                        region: region, fgColor: fgSIMD, bgColor: transparentBg)
+                }
+            } else {
+                addQuad(
+                    to: &fgVerts, x: x, y: y, w: allocatedW, h: cellH,
+                    region: region, fgColor: fgSIMD, bgColor: transparentBg)
+            }
+            col += cellCount
+        }
+        rowForegroundVertices[row] = fgVerts
+    }
+
+    /// Ensure the pre-allocated vertex buffer is large enough for the given vertex count.
+    /// Grows by 2x when capacity is exceeded to amortize reallocation cost.
+    private func ensureVertexBuffer(vertexCount: Int) -> MTLBuffer? {
+        let requiredBytes = vertexCount * MemoryLayout<Vertex>.stride
+        if let buffer = vertexBuffer, vertexBufferCapacity >= requiredBytes {
+            return buffer
+        }
+        // Grow to at least 2x current capacity to avoid frequent reallocation
+        let newCapacity = max(requiredBytes, vertexBufferCapacity * 2)
+        guard let buffer = device.makeBuffer(length: newCapacity, options: .storageModeShared)
+        else {
+            return nil
+        }
+        vertexBuffer = buffer
+        vertexBufferCapacity = newCapacity
+        return buffer
     }
 
     private func colorToSIMD4(_ rgb: Int) -> SIMD4<Float> {

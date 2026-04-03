@@ -11,15 +11,15 @@ nonisolated final class GlyphAtlas {
         let drawWidth: Float  // actual rendered width in points (multiply by scale for pixels)
     }
 
-    // Background-independent cache key: glyphs are rendered with transparent
-    // background so the same glyph can be reused regardless of cell background.
+    // Color-independent cache key: glyphs are rendered as white alpha masks
+    // so the same glyph can be reused regardless of foreground or background color.
+    // Colors are applied per-vertex in the fragment shader.
     struct Key: Hashable {
         let text: String
         let fontName: String
         let fontSize: CGFloat
         let bold: Bool
         let italic: Bool
-        let foreground: Int
         let cellCount: Int
     }
 
@@ -46,11 +46,11 @@ nonisolated final class GlyphAtlas {
 
     func region(
         text: String, font: NSFont, bold: Bool, italic: Bool,
-        fg: Int, cellSize: CGSize, cellCount: Int = 1
+        cellSize: CGSize, cellCount: Int = 1
     ) -> Region {
         let key = Key(
             text: text, fontName: font.fontName, fontSize: font.pointSize,
-            bold: bold, italic: italic, foreground: fg,
+            bold: bold, italic: italic,
             cellCount: cellCount)
 
         if let existing = regions[key] { return existing }
@@ -96,10 +96,10 @@ nonisolated final class GlyphAtlas {
             invalidate()
         }
 
-        // Render glyph with transparent background
+        // Render glyph as white alpha mask (color applied in fragment shader)
         let imageData = renderGlyph(
             text: text, font: drawFont,
-            fg: fg, width: pixelW, height: pixelH,
+            width: pixelW, height: pixelH,
             drawWidth: renderWidth, cellHeight: cellSize.height)
 
         // Copy to atlas texture
@@ -143,12 +143,24 @@ nonisolated final class GlyphAtlas {
         )
         descriptor.usage = [.shaderRead]
         descriptor.storageMode = .managed  // CPU-writable, GPU-readable on macOS
-        return device.makeTexture(descriptor: descriptor)!
+        let texture = device.makeTexture(descriptor: descriptor)!
+        // Clear the sentinel pixel at (0,0) to guarantee transparency.
+        // Background and cursor quads sample this pixel; Metal does not
+        // guarantee initial texture contents.
+        let zero: [UInt8] = [0, 0, 0, 0]
+        texture.replace(
+            region: MTLRegionMake2D(0, 0, 1, 1),
+            mipmapLevel: 0, withBytes: zero, bytesPerRow: 4
+        )
+        return texture
     }
 
+    /// Render glyph as a white alpha mask on transparent background.
+    /// The fragment shader multiplies this mask by the per-vertex fgColor,
+    /// allowing the same atlas entry to be reused across all color combinations.
     private func renderGlyph(
         text: String, font: NSFont,
-        fg: Int, width: Int, height: Int,
+        width: Int, height: Int,
         drawWidth: CGFloat, cellHeight: CGFloat
     ) -> [UInt8] {
         let colorSpace = CGColorSpace(name: CGColorSpace.sRGB)!
@@ -166,13 +178,10 @@ nonisolated final class GlyphAtlas {
         ctx.scaleBy(x: scale, y: scale)
 
         // Background is left transparent (zeroed memory from CGContext init).
-        // The shader's mix(bgColor, texColor, texColor.a) will show bgColor where alpha=0.
-
-        // Draw text via CoreText
-        let fgColor = NSColor(rgb: fg)
+        // Glyph is rendered in white; the shader colorizes via per-vertex fgColor.
         let attributes: [NSAttributedString.Key: Any] = [
             .font: font,
-            .foregroundColor: fgColor,
+            .foregroundColor: NSColor.white,
         ]
         let attrString = NSAttributedString(string: text, attributes: attributes)
         let line = CTLineCreateWithAttributedString(attrString)
