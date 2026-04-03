@@ -20,7 +20,7 @@ final class NvimView: NSView {
         didSet { updateFont(gridFont) }
     }
     var cellSize: CGSize
-    var defaultFg: Int = 0x000000
+    var defaultFg: Int
     var defaultBg: Int
     var flatCharIndices: [[Int]] = []
     var modeInfoList: [ModeInfo] = []
@@ -64,9 +64,8 @@ final class NvimView: NSView {
         self.gridFont = defaultFont
         let size = NvimView.computeCellSize(for: defaultFont)
         self.cellSize = size
-        self.defaultBg =
-            UserDefaults.standard.object(forKey: "VeilDefaultBg") as? Int
-            ?? NSColor.windowBackgroundColor.intValue
+        self.defaultFg = UserDefaults.standard.object(forKey: "VeilDefaultFg") as? Int ?? 0xCCCCCC
+        self.defaultBg = UserDefaults.standard.object(forKey: "VeilDefaultBg") as? Int ?? 0x1E1E2E
         self.glyphCache = GlyphCache(font: defaultFont, cellSize: size)
         self.rowRenderer = RowRenderer(cellSize: size, glyphCache: glyphCache)
         super.init(frame: frame)
@@ -77,9 +76,8 @@ final class NvimView: NSView {
         self.gridFont = defaultFont
         let size = NvimView.computeCellSize(for: defaultFont)
         self.cellSize = size
-        self.defaultBg =
-            UserDefaults.standard.object(forKey: "VeilDefaultBg") as? Int
-            ?? NSColor.windowBackgroundColor.intValue
+        self.defaultFg = UserDefaults.standard.object(forKey: "VeilDefaultFg") as? Int ?? 0xCCCCCC
+        self.defaultBg = UserDefaults.standard.object(forKey: "VeilDefaultBg") as? Int ?? 0x1E1E2E
         self.glyphCache = GlyphCache(font: defaultFont, cellSize: size)
         self.rowRenderer = RowRenderer(cellSize: size, glyphCache: glyphCache)
         super.init(coder: coder)

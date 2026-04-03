@@ -26,8 +26,10 @@ final class Grid {
         cursorPosition = .zero
         dirtyRows = IndexSet()
         attributes = [:]
-        defaultForeground = 0x000000
-        defaultBackground = 0xFFFFFF
+        defaultForeground =
+            UserDefaults.standard.object(forKey: "VeilDefaultFg") as? Int ?? 0xCCCCCC
+        defaultBackground =
+            UserDefaults.standard.object(forKey: "VeilDefaultBg") as? Int ?? 0x1E1E2E
         defaultSpecial = 0xFF0000
         flatCharIndices = []
     }

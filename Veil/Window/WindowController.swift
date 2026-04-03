@@ -30,11 +30,8 @@ class WindowController: NSWindowController, NSWindowDelegate {
         // chrome a grounded, recessive look that visually separates it from
         // the editing area without clashing with the colorscheme.
         let defaults = UserDefaults.standard
-        if let cachedBg = defaults.object(forKey: "VeilDefaultBg") as? Int {
-            window.backgroundColor = NSColor(rgb: Self.darkenColor(cachedBg, factor: 0.75))
-        } else {
-            window.backgroundColor = .windowBackgroundColor
-        }
+        let cachedBg = defaults.object(forKey: "VeilDefaultBg") as? Int ?? 0x1E1E2E
+        window.backgroundColor = NSColor(rgb: Self.darkenColor(cachedBg, factor: 0.75))
 
         self.init(window: window)
         window.delegate = self
@@ -42,11 +39,8 @@ class WindowController: NSWindowController, NSWindowDelegate {
         let titleLabel = NSTextField(labelWithString: "Veil")
         titleLabel.translatesAutoresizingMaskIntoConstraints = false
         titleLabel.font = .titleBarFont(ofSize: 0)
-        if let cachedFg = defaults.object(forKey: "VeilDefaultFg") as? Int {
-            titleLabel.textColor = NSColor(rgb: cachedFg)
-        } else {
-            titleLabel.textColor = .windowFrameTextColor
-        }
+        let cachedFg = defaults.object(forKey: "VeilDefaultFg") as? Int ?? 0xCCCCCC
+        titleLabel.textColor = NSColor(rgb: cachedFg)
         titleLabel.lineBreakMode = .byTruncatingTail
 
         let container = NSView()
