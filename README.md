@@ -129,15 +129,17 @@ ln -s /Applications/Veil.app/Contents/bin/gvim ~/.local/bin/gvim
 ln -s /Applications/Veil.app/Contents/bin/gvimdiff ~/.local/bin/gvimdiff
 ```
 
-Then use it like nvim:
+Then use it like nvim. All nvim flags and arguments are passed through transparently:
 
 ```bash
 veil file.txt
-veil -d file1.txt file2.txt
+gvim +42 file.txt               # open at line 42
+gvim -p file1.txt file2.txt     # open in tabs
+veil -d file1.txt file2.txt     # diff mode
 gvimdiff file1.txt file2.txt    # same as veil -d
 ```
 
-If Veil is already running, the CLI forwards files to the existing instance (opens a new window) instead of launching a second copy.
+If Veil is already running, the CLI forwards arguments to the existing instance (opens a new window) instead of launching a second copy.
 
 ### Multiple nvim configs
 
