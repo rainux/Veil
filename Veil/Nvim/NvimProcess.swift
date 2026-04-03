@@ -127,10 +127,12 @@ nonisolated final class NvimProcess: @unchecked Sendable {
         }
         let data = pipe.fileHandleForReading.readDataToEndOfFile()
         guard let output = String(data: data, encoding: .utf8),
-              let markerRange = output.range(of: marker) else {
+            let markerRange = output.range(of: marker)
+        else {
             return ProcessInfo.processInfo.environment
         }
-        let envString = output[markerRange.upperBound...].trimmingCharacters(in: .whitespacesAndNewlines)
+        let envString = output[markerRange.upperBound...].trimmingCharacters(
+            in: .whitespacesAndNewlines)
         var env: [String: String] = [:]
         for line in envString.split(separator: "\n") {
             let parts = line.split(separator: "=", maxSplits: 1)

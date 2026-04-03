@@ -64,7 +64,8 @@ final class NvimView: NSView {
         self.gridFont = defaultFont
         let size = NvimView.computeCellSize(for: defaultFont)
         self.cellSize = size
-        self.defaultBg = UserDefaults.standard.object(forKey: "VeilDefaultBg") as? Int
+        self.defaultBg =
+            UserDefaults.standard.object(forKey: "VeilDefaultBg") as? Int
             ?? NSColor.windowBackgroundColor.intValue
         self.glyphCache = GlyphCache(font: defaultFont, cellSize: size)
         self.rowRenderer = RowRenderer(cellSize: size, glyphCache: glyphCache)
@@ -76,7 +77,8 @@ final class NvimView: NSView {
         self.gridFont = defaultFont
         let size = NvimView.computeCellSize(for: defaultFont)
         self.cellSize = size
-        self.defaultBg = UserDefaults.standard.object(forKey: "VeilDefaultBg") as? Int
+        self.defaultBg =
+            UserDefaults.standard.object(forKey: "VeilDefaultBg") as? Int
             ?? NSColor.windowBackgroundColor.intValue
         self.glyphCache = GlyphCache(font: defaultFont, cellSize: size)
         self.rowRenderer = RowRenderer(cellSize: size, glyphCache: glyphCache)
@@ -148,12 +150,14 @@ final class NvimView: NSView {
 
             // Build debug overlay text if enabled
             let renderStart = CACurrentMediaTime()
-            let debugText: String? = debugOverlayEnabled ? """
-            Renderer: Metal (\(metalRenderer.device.name))
-            Frame: \(String(format: "%.1f", lastFrameTime)) ms
-            Grid: \(grid.size.cols)×\(grid.size.rows)
-            Atlas: \(glyphAtlas.regionCount)
-            """ : nil
+            let debugText: String? =
+                debugOverlayEnabled
+                ? """
+                Renderer: Metal (\(metalRenderer.device.name))
+                Frame: \(String(format: "%.1f", lastFrameTime)) ms
+                Grid: \(grid.size.cols)×\(grid.size.rows)
+                Atlas: \(glyphAtlas.regionCount)
+                """ : nil
 
             metalRenderer.render(
                 cells: grid.cells, attributes: grid.attributes,
@@ -198,7 +202,8 @@ final class NvimView: NSView {
                     scale: screenScale
                 ) {
                     let rowLayer = rowLayers[rowIdx]
-                    let y = bounds.height - CGFloat(rowIdx + 1) * cellSize.height - Self.gridTopPadding
+                    let y =
+                        bounds.height - CGFloat(rowIdx + 1) * cellSize.height - Self.gridTopPadding
                     CATransaction.begin()
                     CATransaction.setDisableActions(true)
                     rowLayer.frame = CGRect(
@@ -290,7 +295,9 @@ final class NvimView: NSView {
         let glyph = font.glyph(withName: "M")
         let advancement = font.advancement(forGlyph: glyph)
         let width = advancement.width > 0 ? advancement.width : font.pointSize * 0.6
-        let height = ceil((CTFontGetAscent(font) + CTFontGetDescent(font) + CTFontGetLeading(font)) * lineHeightMultiplier)
+        let height = ceil(
+            (CTFontGetAscent(font) + CTFontGetDescent(font) + CTFontGetLeading(font))
+                * lineHeightMultiplier)
         return CGSize(width: ceil(width), height: height)
     }
 

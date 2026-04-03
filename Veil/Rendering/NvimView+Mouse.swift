@@ -38,7 +38,9 @@ extension NvimView {
                         self.lastScrollLines = absLines
                         try? await channel?.command("set mousescroll=ver:\(absLines),hor:0")
                     }
-                    await channel?.inputMouse(button: "wheel", action: action, modifier: modifier, grid: 0, row: position.row, col: position.col)
+                    await channel?.inputMouse(
+                        button: "wheel", action: action, modifier: modifier, grid: 0,
+                        row: position.row, col: position.col)
                 }
             }
         } else {
@@ -50,14 +52,18 @@ extension NvimView {
                 let count = max(1, Int(abs(deltaY)))
                 Task {
                     try? await channel?.command("set mousescroll=ver:\(count),hor:0")
-                    await channel?.inputMouse(button: "wheel", action: action, modifier: modifier, grid: 0, row: position.row, col: position.col)
+                    await channel?.inputMouse(
+                        button: "wheel", action: action, modifier: modifier, grid: 0,
+                        row: position.row, col: position.col)
                 }
             } else if abs(deltaX) > 0 {
                 let action = deltaX > 0 ? "left" : "right"
                 let count = max(1, Int(abs(deltaX)))
                 Task {
                     try? await channel?.command("set mousescroll=ver:0,hor:\(count)")
-                    await channel?.inputMouse(button: "wheel", action: action, modifier: modifier, grid: 0, row: position.row, col: position.col)
+                    await channel?.inputMouse(
+                        button: "wheel", action: action, modifier: modifier, grid: 0,
+                        row: position.row, col: position.col)
                 }
             }
         }
@@ -68,7 +74,9 @@ extension NvimView {
         let position = gridPosition(for: point)
         let modifier = modifierString(event.modifierFlags)
         Task {
-            await channel?.inputMouse(button: button, action: action, modifier: modifier, grid: 0, row: position.row, col: position.col)
+            await channel?.inputMouse(
+                button: button, action: action, modifier: modifier, grid: 0, row: position.row,
+                col: position.col)
         }
     }
 

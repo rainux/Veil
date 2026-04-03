@@ -37,7 +37,8 @@ final class GlyphCacheTests: XCTestCase {
         let attrs2 = CellAttributes(bold: true)
         let image1 = cache.get(text: "C", attrs: attrs1, defaultFg: defaultFg, defaultBg: defaultBg)
         let image2 = cache.get(text: "C", attrs: attrs2, defaultFg: defaultFg, defaultBg: defaultBg)
-        XCTAssertFalse(image1 === image2, "Different attributes should produce different cached images")
+        XCTAssertFalse(
+            image1 === image2, "Different attributes should produce different cached images")
     }
 
     func testInvalidateClearsCache() {

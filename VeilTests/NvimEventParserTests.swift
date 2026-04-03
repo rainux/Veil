@@ -114,7 +114,9 @@ final class NvimEventParserTests: XCTestCase {
     // MARK: - hlAttrDefine
 
     func testHlAttrDefine() {
-        let rgbAttrs: MessagePackValue = .map([.string("bold"): .bool(true), .string("foreground"): .int(0xFF0000)])
+        let rgbAttrs: MessagePackValue = .map([
+            .string("bold"): .bool(true), .string("foreground"): .int(0xFF0000),
+        ])
         let ctermAttrs: MessagePackValue = .map([:])
         let info: MessagePackValue = .array([])
         let args: [MessagePackValue] = [.array([.int(10), rgbAttrs, ctermAttrs, info])]
@@ -132,7 +134,9 @@ final class NvimEventParserTests: XCTestCase {
     // MARK: - defaultColorsSet
 
     func testDefaultColorsSet() {
-        let args: [MessagePackValue] = [.array([.int(0xFFFFFF), .int(0x000000), .int(0xFF00FF), .int(15), .int(0)])]
+        let args: [MessagePackValue] = [
+            .array([.int(0xFFFFFF), .int(0x000000), .int(0xFF00FF), .int(15), .int(0)])
+        ]
         let events = NvimEvent.parse(redrawArgs: redrawArgs("default_colors_set", args))
         XCTAssertEqual(events.count, 1)
         if case .defaultColorsSet(let fg, let bg, let sp, let ctermFg, let ctermBg) = events[0] {
@@ -149,10 +153,14 @@ final class NvimEventParserTests: XCTestCase {
     // MARK: - gridScroll
 
     func testGridScroll() {
-        let args: [MessagePackValue] = [.array([.int(1), .int(0), .int(24), .int(0), .int(80), .int(3), .int(0)])]
+        let args: [MessagePackValue] = [
+            .array([.int(1), .int(0), .int(24), .int(0), .int(80), .int(3), .int(0)])
+        ]
         let events = NvimEvent.parse(redrawArgs: redrawArgs("grid_scroll", args))
         XCTAssertEqual(events.count, 1)
-        if case .gridScroll(let grid, let top, let bottom, let left, let right, let rows, let cols) = events[0] {
+        if case .gridScroll(
+            let grid, let top, let bottom, let left, let right, let rows, let cols) = events[0]
+        {
             XCTAssertEqual(grid, 1)
             XCTAssertEqual(top, 0)
             XCTAssertEqual(bottom, 24)
@@ -197,8 +205,12 @@ final class NvimEventParserTests: XCTestCase {
     // MARK: - tablineUpdate
 
     func testTablineUpdate() {
-        let tab1: MessagePackValue = .map([.string("tab"): .int(1), .string("name"): .string("index.swift")])
-        let tab2: MessagePackValue = .map([.string("tab"): .int(2), .string("name"): .string("App.swift")])
+        let tab1: MessagePackValue = .map([
+            .string("tab"): .int(1), .string("name"): .string("index.swift"),
+        ])
+        let tab2: MessagePackValue = .map([
+            .string("tab"): .int(2), .string("name"): .string("App.swift"),
+        ])
         let args: [MessagePackValue] = [.array([.int(1), .array([tab1, tab2])])]
         let events = NvimEvent.parse(redrawArgs: redrawArgs("tabline_update", args))
         XCTAssertEqual(events.count, 1)
@@ -232,7 +244,8 @@ final class NvimEventParserTests: XCTestCase {
         // flush
         redrawArgsList.append(.array([.string("flush")]))
         // grid_resize [1, 120, 40]
-        redrawArgsList.append(.array([.string("grid_resize"), .array([.int(1), .int(120), .int(40)])]))
+        redrawArgsList.append(
+            .array([.string("grid_resize"), .array([.int(1), .int(120), .int(40)])]))
         let events = NvimEvent.parse(redrawArgs: redrawArgsList)
         XCTAssertEqual(events.count, 2)
         if case .flush = events[0] {} else { XCTFail("Expected flush at index 0") }
@@ -248,7 +261,8 @@ final class NvimEventParserTests: XCTestCase {
     // MARK: - Unknown event
 
     func testUnknownEvent() {
-        let events = NvimEvent.parse(redrawArgs: redrawArgs("unknown_future_event", [.array([.int(1)])]))
+        let events = NvimEvent.parse(
+            redrawArgs: redrawArgs("unknown_future_event", [.array([.int(1)])]))
         XCTAssertEqual(events.count, 0)
     }
 }

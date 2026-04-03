@@ -15,7 +15,7 @@ struct ProfileTests {
         let b = Profile(name: "nvim", displayName: "Something Else")
         let c = Profile(name: "lazyvim", displayName: "LazyVim")
 
-        #expect(a == b)   // same name => equal
+        #expect(a == b)  // same name => equal
         #expect(a != c)
     }
 

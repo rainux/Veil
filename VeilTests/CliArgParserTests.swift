@@ -9,13 +9,17 @@ struct CliArgParserTests {
     }
 
     @Test func rendererWithFile() {
-        let result = CliArgParser.parse(["/path/to/Veil", "--veil-renderer", "coretext", "README.md"])
+        let result = CliArgParser.parse([
+            "/path/to/Veil", "--veil-renderer", "coretext", "README.md",
+        ])
         #expect(result.renderer == .coretext)
         #expect(result.nvimArgs == ["README.md"])
     }
 
     @Test func rendererAfterFile() {
-        let result = CliArgParser.parse(["/path/to/Veil", "README.md", "--veil-renderer", "coretext"])
+        let result = CliArgParser.parse([
+            "/path/to/Veil", "README.md", "--veil-renderer", "coretext",
+        ])
         #expect(result.renderer == .coretext)
         #expect(result.nvimArgs == ["README.md"])
     }
@@ -41,7 +45,7 @@ struct CliArgParserTests {
             "/path/to/Veil",
             "-NSDocumentRevisionsDebugMode", "YES",
             "-ApplePersistenceIgnoreState", "YES",
-            "file.txt"
+            "file.txt",
         ])
         #expect(result.nvimArgs == ["file.txt"])
         #expect(result.renderer == .metal)
@@ -52,7 +56,7 @@ struct CliArgParserTests {
             "/path/to/Veil",
             "-NSDocumentRevisionsDebugMode", "YES",
             "--veil-renderer", "coretext",
-            "file.txt"
+            "file.txt",
         ])
         #expect(result.renderer == .coretext)
         #expect(result.nvimArgs == ["file.txt"])
@@ -61,7 +65,7 @@ struct CliArgParserTests {
     @Test func multipleFiles() {
         let result = CliArgParser.parse([
             "/path/to/Veil", "--veil-renderer", "coretext",
-            "file1.txt", "file2.txt", "file3.txt"
+            "file1.txt", "file2.txt", "file3.txt",
         ])
         #expect(result.renderer == .coretext)
         #expect(result.nvimArgs == ["file1.txt", "file2.txt", "file3.txt"])
@@ -76,7 +80,7 @@ struct CliArgParserTests {
     @Test func rendererWithNvimFlags() {
         let result = CliArgParser.parse([
             "/path/to/Veil", "--veil-renderer", "coretext",
-            "-d", "file1.txt", "file2.txt"
+            "-d", "file1.txt", "file2.txt",
         ])
         #expect(result.renderer == .coretext)
         #expect(result.nvimArgs == ["-d", "file1.txt", "file2.txt"])

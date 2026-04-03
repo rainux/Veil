@@ -6,7 +6,8 @@ import MessagePack
 extension NvimView {
     override func performKeyEquivalent(with event: NSEvent) -> Bool {
         guard event.modifierFlags.contains(.command),
-              let chars = event.charactersIgnoringModifiers else {
+            let chars = event.charactersIgnoringModifiers
+        else {
             return super.performKeyEquivalent(with: event)
         }
 
@@ -23,7 +24,9 @@ extension NvimView {
         }
 
         // Let system handle these Cmd+key combos
-        let systemKeys: Set<String> = ["q", "n", "h", "m", ",", "z", "x", "c", "v", "a", "`", "s", "w"]
+        let systemKeys: Set<String> = [
+            "q", "n", "h", "m", ",", "z", "x", "c", "v", "a", "`", "s", "w",
+        ]
         if systemKeys.contains(chars.lowercased()) {
             return super.performKeyEquivalent(with: event)
         }
@@ -52,7 +55,8 @@ extension NvimView {
         if let chars = event.characters, let scalar = chars.unicodeScalars.first {
             let code = Int(scalar.value)
             if code == 0x1B || code == 0x0D || code == 0x09 || code == 0x7F
-                || code == 0x19 || (code >= 0xF700 && code <= 0xF8FF) {
+                || code == 0x19 || (code >= 0xF700 && code <= 0xF8FF)
+            {
                 sendKeyDirectly(event)
                 return
             }
@@ -99,12 +103,14 @@ extension NvimView {
         guard pixelWidth > 0, pixelHeight > 0 else { return }
 
         let colorSpace = CGColorSpace(name: CGColorSpace.sRGB)!
-        guard let ctx = CGContext(
-            data: nil, width: pixelWidth, height: pixelHeight,
-            bitsPerComponent: 8, bytesPerRow: 0,
-            space: colorSpace,
-            bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
-        ) else { return }
+        guard
+            let ctx = CGContext(
+                data: nil, width: pixelWidth, height: pixelHeight,
+                bitsPerComponent: 8, bytesPerRow: 0,
+                space: colorSpace,
+                bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
+            )
+        else { return }
 
         ctx.scaleBy(x: screenScale, y: screenScale)
 
@@ -172,7 +178,8 @@ extension NvimView {
     @objc func closeTabOrWindow(_ sender: Any?) {
         Task {
             guard let channel else { return }
-            let (_, result) = await channel.request("nvim_eval", params: [.string("tabpagenr('$')")])
+            let (_, result) = await channel.request(
+                "nvim_eval", params: [.string("tabpagenr('$')")])
             let tabCount = result.intValue
             if tabCount > 1 {
                 try? await channel.command("tabclose")
@@ -209,7 +216,8 @@ extension NvimView {
     @objc func paste(_ sender: Any?) {
         guard let text = NSPasteboard.general.string(forType: .string) else { return }
         Task {
-            _ = await channel?.request("nvim_paste", params: [.string(text), .bool(true), .int(-1)])
+            _ = await channel?.request(
+                "nvim_paste", params: [.string(text), .bool(true), .int(-1)])
         }
     }
 
@@ -256,10 +264,11 @@ extension NvimView: NSTextInputClient {
         } else {
             markedText = text
             // Capture cursor position when composition begins
-            markedPosition = gridPosition(for: NSPoint(
-                x: cursorLayer.frame.origin.x,
-                y: cursorLayer.frame.origin.y + cellSize.height / 2
-            ))
+            markedPosition = gridPosition(
+                for: NSPoint(
+                    x: cursorLayer.frame.origin.x,
+                    y: cursorLayer.frame.origin.y + cellSize.height / 2
+                ))
             updateMarkedTextDisplay()
         }
     }
@@ -284,7 +293,9 @@ extension NvimView: NSTextInputClient {
         markedText != nil
     }
 
-    func attributedSubstring(forProposedRange range: NSRange, actualRange: NSRangePointer?) -> NSAttributedString? {
+    func attributedSubstring(forProposedRange range: NSRange, actualRange: NSRangePointer?)
+        -> NSAttributedString?
+    {
         nil
     }
 

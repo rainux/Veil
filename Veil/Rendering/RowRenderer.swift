@@ -34,15 +34,17 @@ nonisolated final class RowRenderer: @unchecked Sendable {
         guard pixelWidth > 0 && pixelHeight > 0 else { return nil }
 
         let colorSpace = CGColorSpace(name: CGColorSpace.sRGB)!
-        guard let ctx = CGContext(
-            data: nil,
-            width: pixelWidth,
-            height: pixelHeight,
-            bitsPerComponent: 8,
-            bytesPerRow: 0,
-            space: colorSpace,
-            bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
-        ) else { return nil }
+        guard
+            let ctx = CGContext(
+                data: nil,
+                width: pixelWidth,
+                height: pixelHeight,
+                bitsPerComponent: 8,
+                bytesPerRow: 0,
+                space: colorSpace,
+                bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
+            )
+        else { return nil }
 
         ctx.scaleBy(x: scale, y: scale)
 
@@ -58,7 +60,8 @@ nonisolated final class RowRenderer: @unchecked Sendable {
             let attrs = attributes[cell.hlId] ?? defaultAttrs
 
             // Detect double-width character
-            let isDoubleWidth = !text.isEmpty && text != " " && col + 1 < cols && row[col + 1].text.isEmpty
+            let isDoubleWidth =
+                !text.isEmpty && text != " " && col + 1 < cols && row[col + 1].text.isEmpty
             let cellCount = isDoubleWidth ? 2 : 1
             let drawWidth = cellSize.width * CGFloat(cellCount)
 
@@ -81,7 +84,9 @@ nonisolated final class RowRenderer: @unchecked Sendable {
             }
 
             // Get glyph image from cache and composite
-            let glyphImage = glyphCache.get(text: text, attrs: attrs, defaultFg: defaultFg, defaultBg: defaultBg, cellCount: cellCount)
+            let glyphImage = glyphCache.get(
+                text: text, attrs: attrs, defaultFg: defaultFg, defaultBg: defaultBg,
+                cellCount: cellCount)
             ctx.draw(glyphImage, in: cellRect)
 
             col += cellCount

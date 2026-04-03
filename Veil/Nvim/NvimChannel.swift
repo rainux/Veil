@@ -15,10 +15,13 @@ actor NvimChannel {
         self.eventContinuation = continuation
     }
 
-    func start(nvimPath: String = "", cwd: String = NSHomeDirectory(), appName: String = "nvim",
-                extraArgs: [String] = [], env: [String: String]? = nil) async throws {
-        let proc = NvimProcess(nvimPath: nvimPath, cwd: cwd, appName: appName,
-                               customEnv: env, extraArgs: extraArgs)
+    func start(
+        nvimPath: String = "", cwd: String = NSHomeDirectory(), appName: String = "nvim",
+        extraArgs: [String] = [], env: [String: String]? = nil
+    ) async throws {
+        let proc = NvimProcess(
+            nvimPath: nvimPath, cwd: cwd, appName: appName,
+            customEnv: env, extraArgs: extraArgs)
         try proc.start()
         self.process = proc
 
@@ -65,15 +68,17 @@ actor NvimChannel {
     }
 
     func uiAttach(width: Int, height: Int) async throws {
-        let (error, _) = await request("nvim_ui_attach", params: [
-            .int(Int64(width)), .int(Int64(height)),
-            .map([
-                .string("rgb"): .bool(true),
-                .string("ext_linegrid"): .bool(true),
-                .string("ext_tabline"): .bool(false),
-                .string("ext_multigrid"): .bool(false),
-            ]),
-        ])
+        let (error, _) = await request(
+            "nvim_ui_attach",
+            params: [
+                .int(Int64(width)), .int(Int64(height)),
+                .map([
+                    .string("rgb"): .bool(true),
+                    .string("ext_linegrid"): .bool(true),
+                    .string("ext_tabline"): .bool(false),
+                    .string("ext_multigrid"): .bool(false),
+                ]),
+            ])
         if case .string(let msg) = error { throw NvimChannelError.rpcError(msg) }
         if error != .nil { throw NvimChannelError.rpcError("ui_attach failed: \(error)") }
     }
@@ -88,7 +93,9 @@ actor NvimChannel {
         if error != .nil { throw NvimChannelError.rpcError("command failed: \(error)") }
     }
 
-    func request(_ method: String, params: [MessagePackValue]) async -> (error: MessagePackValue, result: MessagePackValue) {
+    func request(_ method: String, params: [MessagePackValue]) async -> (
+        error: MessagePackValue, result: MessagePackValue
+    ) {
         guard let rpc else { return (.string("not connected"), .nil) }
         return await rpc.request(method: method, params: params)
     }
@@ -97,11 +104,15 @@ actor NvimChannel {
         _ = await request("nvim_ui_try_resize", params: [.int(Int64(width)), .int(Int64(height))])
     }
 
-    func inputMouse(button: String, action: String, modifier: String, grid: Int, row: Int, col: Int) async {
-        _ = await request("nvim_input_mouse", params: [
-            .string(button), .string(action), .string(modifier),
-            .int(Int64(grid)), .int(Int64(row)), .int(Int64(col)),
-        ])
+    func inputMouse(button: String, action: String, modifier: String, grid: Int, row: Int, col: Int)
+        async
+    {
+        _ = await request(
+            "nvim_input_mouse",
+            params: [
+                .string(button), .string(action), .string(modifier),
+                .int(Int64(grid)), .int(Int64(row)), .int(Int64(col)),
+            ])
     }
 
     func stop() {

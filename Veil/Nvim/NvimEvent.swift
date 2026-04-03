@@ -35,7 +35,9 @@ enum NvimEvent: Sendable {
     case gridCursorGoto(grid: Int, row: Int, col: Int)
     case gridScroll(grid: Int, top: Int, bottom: Int, left: Int, right: Int, rows: Int, cols: Int)
     case flush
-    case hlAttrDefine(id: Int, rgbAttrs: [String: MessagePackValue], ctermAttrs: [String: MessagePackValue], info: [MessagePackValue])
+    case hlAttrDefine(
+        id: Int, rgbAttrs: [String: MessagePackValue], ctermAttrs: [String: MessagePackValue],
+        info: [MessagePackValue])
     case defaultColorsSet(rgbFg: Int, rgbBg: Int, rgbSp: Int, ctermFg: Int, ctermBg: Int)
     case modeChange(mode: String, modeIdx: Int)
     case modeInfoSet(enabled: Bool, modeInfoList: [ModeInfo])
@@ -100,71 +102,82 @@ enum NvimEvent: Sendable {
             case "grid_cursor_goto":
                 for args in eventArgs {
                     guard let a = args.arrayValue, a.count >= 3 else { continue }
-                    events.append(.gridCursorGoto(grid: a[0].intValue, row: a[1].intValue, col: a[2].intValue))
+                    events.append(
+                        .gridCursorGoto(grid: a[0].intValue, row: a[1].intValue, col: a[2].intValue)
+                    )
                 }
             case "grid_scroll":
                 for args in eventArgs {
                     guard let a = args.arrayValue, a.count >= 7 else { continue }
-                    events.append(.gridScroll(
-                        grid: a[0].intValue,
-                        top: a[1].intValue,
-                        bottom: a[2].intValue,
-                        left: a[3].intValue,
-                        right: a[4].intValue,
-                        rows: a[5].intValue,
-                        cols: a[6].intValue
-                    ))
+                    events.append(
+                        .gridScroll(
+                            grid: a[0].intValue,
+                            top: a[1].intValue,
+                            bottom: a[2].intValue,
+                            left: a[3].intValue,
+                            right: a[4].intValue,
+                            rows: a[5].intValue,
+                            cols: a[6].intValue
+                        ))
                 }
             case "hl_attr_define":
                 for args in eventArgs {
                     guard let a = args.arrayValue, a.count >= 4 else { continue }
                     let id = a[0].intValue
-                    let rgbAttrs = a[1].dictionaryValue.flatMap { dict -> [String: MessagePackValue]? in
-                        var result: [String: MessagePackValue] = [:]
-                        for (k, v) in dict {
-                            if let key = k.stringValue { result[key] = v }
-                        }
-                        return result
-                    } ?? [:]
-                    let ctermAttrs = a[2].dictionaryValue.flatMap { dict -> [String: MessagePackValue]? in
-                        var result: [String: MessagePackValue] = [:]
-                        for (k, v) in dict {
-                            if let key = k.stringValue { result[key] = v }
-                        }
-                        return result
-                    } ?? [:]
+                    let rgbAttrs =
+                        a[1].dictionaryValue.flatMap { dict -> [String: MessagePackValue]? in
+                            var result: [String: MessagePackValue] = [:]
+                            for (k, v) in dict {
+                                if let key = k.stringValue { result[key] = v }
+                            }
+                            return result
+                        } ?? [:]
+                    let ctermAttrs =
+                        a[2].dictionaryValue.flatMap { dict -> [String: MessagePackValue]? in
+                            var result: [String: MessagePackValue] = [:]
+                            for (k, v) in dict {
+                                if let key = k.stringValue { result[key] = v }
+                            }
+                            return result
+                        } ?? [:]
                     let info = a[3].arrayValue ?? []
-                    events.append(.hlAttrDefine(id: id, rgbAttrs: rgbAttrs, ctermAttrs: ctermAttrs, info: info))
+                    events.append(
+                        .hlAttrDefine(
+                            id: id, rgbAttrs: rgbAttrs, ctermAttrs: ctermAttrs, info: info))
                 }
             case "default_colors_set":
                 for args in eventArgs {
                     guard let a = args.arrayValue, a.count >= 5 else { continue }
-                    events.append(.defaultColorsSet(
-                        rgbFg: a[0].intValue,
-                        rgbBg: a[1].intValue,
-                        rgbSp: a[2].intValue,
-                        ctermFg: a[3].intValue,
-                        ctermBg: a[4].intValue
-                    ))
+                    events.append(
+                        .defaultColorsSet(
+                            rgbFg: a[0].intValue,
+                            rgbBg: a[1].intValue,
+                            rgbSp: a[2].intValue,
+                            ctermFg: a[3].intValue,
+                            ctermBg: a[4].intValue
+                        ))
                 }
             case "mode_change":
                 for args in eventArgs {
                     guard let a = args.arrayValue, a.count >= 2,
-                          let mode = a[0].stringValue else { continue }
+                        let mode = a[0].stringValue
+                    else { continue }
                     events.append(.modeChange(mode: mode, modeIdx: a[1].intValue))
                 }
             case "mode_info_set":
                 for args in eventArgs {
                     guard let a = args.arrayValue, a.count >= 2,
-                          let enabled = a[0].boolValue,
-                          let rawList = a[1].arrayValue else { continue }
+                        let enabled = a[0].boolValue,
+                        let rawList = a[1].arrayValue
+                    else { continue }
                     let modeInfoList = rawList.compactMap { parseModeInfo($0) }
                     events.append(.modeInfoSet(enabled: enabled, modeInfoList: modeInfoList))
                 }
             case "tabline_update":
                 for args in eventArgs {
                     guard let a = args.arrayValue, a.count >= 2,
-                          let rawTabs = a[1].arrayValue else { continue }
+                        let rawTabs = a[1].arrayValue
+                    else { continue }
                     let current = a[0].intValue
                     let tabs = rawTabs.compactMap { parseTabpageInfo($0) }
                     events.append(.tablineUpdate(current: current, tabs: tabs))
@@ -172,13 +185,15 @@ enum NvimEvent: Sendable {
             case "set_title":
                 for args in eventArgs {
                     guard let a = args.arrayValue, a.count >= 1,
-                          let title = a[0].stringValue else { continue }
+                        let title = a[0].stringValue
+                    else { continue }
                     events.append(.setTitle(title: title))
                 }
             case "option_set":
                 for args in eventArgs {
                     guard let a = args.arrayValue, a.count >= 2,
-                          let name = a[0].stringValue else { continue }
+                        let name = a[0].stringValue
+                    else { continue }
                     events.append(.optionSet(name: name, value: a[1]))
                 }
             default:
@@ -190,12 +205,15 @@ enum NvimEvent: Sendable {
 
     // MARK: - Private helpers
 
-    private nonisolated static func parseGridLineCells(_ rawCells: [MessagePackValue]) -> [GridCellData] {
+    private nonisolated static func parseGridLineCells(_ rawCells: [MessagePackValue])
+        -> [GridCellData]
+    {
         var cells: [GridCellData] = []
         var lastHlId = 0
         for cell in rawCells {
             guard let a = cell.arrayValue, !a.isEmpty,
-                  let text = a[0].stringValue else { continue }
+                let text = a[0].stringValue
+            else { continue }
             // hlId is optional — if missing, reuse lastHlId (sticky)
             if a.count >= 2 {
                 lastHlId = a[1].intValue

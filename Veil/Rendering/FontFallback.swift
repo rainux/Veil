@@ -15,7 +15,8 @@ nonisolated enum FontFallback {
     /// to be a comprehensive Nerd Font with full icon coverage.
     static func probe() {
         if nerdFontName != nil { return }
-        let probe = CTFontCreateWithName(".AppleSystemUIFontMonospaced-Regular" as CFString, 16, nil)
+        let probe = CTFontCreateWithName(
+            ".AppleSystemUIFontMonospaced-Regular" as CFString, 16, nil)
         let probeChars: [Character] = [
             "\u{F1064}",  // 󱁤 nf-md-expand_all (deep supplementary PUA)
             "\u{F0A19}",  // 󰨙 nf-md-star (mid-range supplementary PUA)
@@ -23,8 +24,9 @@ nonisolated enum FontFallback {
         ]
         for ch in probeChars {
             let text = String(ch)
-            let fallback = CTFontCreateForString(probe, text as CFString,
-                                                  CFRange(location: 0, length: text.utf16.count))
+            let fallback = CTFontCreateForString(
+                probe, text as CFString,
+                CFRange(location: 0, length: text.utf16.count))
             let name = CTFontCopyPostScriptName(fallback) as String
             if name != "LastResort" {
                 nerdFontName = name
@@ -41,8 +43,9 @@ nonisolated enum FontFallback {
         if CTFontGetGlyphsForCharacters(font, utf16, &glyphs, utf16.count) {
             return font
         }
-        let fallback = CTFontCreateForString(font, text as CFString,
-                                              CFRange(location: 0, length: utf16.count))
+        let fallback = CTFontCreateForString(
+            font, text as CFString,
+            CFRange(location: 0, length: utf16.count))
         let fallbackName = CTFontCopyPostScriptName(fallback) as String
         if fallbackName != "LastResort" {
             return fallback

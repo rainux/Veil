@@ -60,8 +60,10 @@ class WindowController: NSWindowController, NSWindowDelegate {
         let titleBarHeight: CGFloat = 28
         NSLayoutConstraint.activate([
             titleLabel.centerXAnchor.constraint(equalTo: container.centerXAnchor),
-            titleLabel.centerYAnchor.constraint(equalTo: container.topAnchor, constant: titleBarHeight / 2),
-            titleLabel.widthAnchor.constraint(lessThanOrEqualTo: container.widthAnchor, constant: -160),
+            titleLabel.centerYAnchor.constraint(
+                equalTo: container.topAnchor, constant: titleBarHeight / 2),
+            titleLabel.widthAnchor.constraint(
+                lessThanOrEqualTo: container.widthAnchor, constant: -160),
 
             nvimView.topAnchor.constraint(equalTo: container.topAnchor, constant: titleBarHeight),
             nvimView.leadingAnchor.constraint(equalTo: container.leadingAnchor),

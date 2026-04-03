@@ -21,11 +21,13 @@ struct Profile: Codable, Hashable, Sendable {
             configURL = URL(fileURLWithPath: NSHomeDirectory()).appendingPathComponent(".config")
         }
 
-        guard let entries = try? fm.contentsOfDirectory(
-            at: configURL,
-            includingPropertiesForKeys: [.isDirectoryKey],
-            options: [.skipsHiddenFiles]
-        ) else {
+        guard
+            let entries = try? fm.contentsOfDirectory(
+                at: configURL,
+                includingPropertiesForKeys: [.isDirectoryKey],
+                options: [.skipsHiddenFiles]
+            )
+        else {
             return [.default]
         }
 
@@ -37,7 +39,8 @@ struct Profile: Codable, Hashable, Sendable {
                 continue
             }
             let dirName = entry.lastPathComponent
-            let hasNvimConfig = fm.fileExists(atPath: entry.appendingPathComponent("init.lua").path)
+            let hasNvimConfig =
+                fm.fileExists(atPath: entry.appendingPathComponent("init.lua").path)
                 || fm.fileExists(atPath: entry.appendingPathComponent("init.vim").path)
             if hasNvimConfig {
                 let displayName = dirName == "nvim" ? "Default" : dirName

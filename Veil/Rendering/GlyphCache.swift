@@ -46,7 +46,9 @@ nonisolated final class GlyphCache: @unchecked Sendable {
         FontFallback.probe()
     }
 
-    func get(text: String, attrs: CellAttributes, defaultFg: Int, defaultBg: Int, cellCount: Int = 1) -> CGImage {
+    func get(
+        text: String, attrs: CellAttributes, defaultFg: Int, defaultBg: Int, cellCount: Int = 1
+    ) -> CGImage {
         let fg = attrs.effectiveForeground(defaultFg: defaultFg, defaultBg: defaultBg)
         let bg = attrs.effectiveBackground(defaultFg: defaultFg, defaultBg: defaultBg)
         let key = Key(
@@ -60,7 +62,9 @@ nonisolated final class GlyphCache: @unchecked Sendable {
             cellCount: cellCount
         )
         if let cached = cache[key] { return cached }
-        let image = render(text: text, bold: attrs.bold, italic: attrs.italic, fg: fg, bg: bg, cellCount: cellCount)
+        let image = render(
+            text: text, bold: attrs.bold, italic: attrs.italic, fg: fg, bg: bg, cellCount: cellCount
+        )
         cache[key] = image
         return image
     }
@@ -77,7 +81,9 @@ nonisolated final class GlyphCache: @unchecked Sendable {
 
     // MARK: - Private
 
-    private func render(text: String, bold: Bool, italic: Bool, fg: Int, bg: Int, cellCount: Int = 1) -> CGImage {
+    private func render(
+        text: String, bold: Bool, italic: Bool, fg: Int, bg: Int, cellCount: Int = 1
+    ) -> CGImage {
         let drawWidth = cellSize.width * CGFloat(cellCount)
         let pixelWidth = Int(ceil(drawWidth * scale))
         let pixelHeight = Int(ceil(cellSize.height * scale))

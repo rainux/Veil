@@ -9,7 +9,8 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     // Parse CLI args eagerly at init time, before any delegate methods run.
     // application(_:openFiles:) can fire before applicationDidFinishLaunching
     // when macOS detects file arguments matching registered document types.
-    private(set) lazy var parsedArgs: CliArgParser.Result = CliArgParser.parse(ProcessInfo.processInfo.arguments)
+    private(set) lazy var parsedArgs: CliArgParser.Result = CliArgParser.parse(
+        ProcessInfo.processInfo.arguments)
     private var initialCliArgs: [String] {
         get { parsedArgs.nvimArgs }
         set { parsedArgs.nvimArgs = newValue }
@@ -48,11 +49,12 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             if !absolutePaths.isEmpty || nvimAppName != nil {
                 var payload: [String: Any] = [
                     "files": absolutePaths,
-                    "env": ProcessInfo.processInfo.environment
+                    "env": ProcessInfo.processInfo.environment,
                 ]
                 if let nvimAppName { payload["nvimAppName"] = nvimAppName }
                 if let data = try? JSONSerialization.data(withJSONObject: payload),
-                   let json = String(data: data, encoding: .utf8) {
+                    let json = String(data: data, encoding: .utf8)
+                {
                     DistributedNotificationCenter.default().post(
                         name: .veilOpenFiles, object: json
                     )
@@ -178,8 +180,9 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
     @objc private func handleOpenFilesNotification(_ notification: Notification) {
         guard let json = notification.object as? String,
-              let data = json.data(using: .utf8),
-              let payload = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else { return }
+            let data = json.data(using: .utf8),
+            let payload = try? JSONSerialization.jsonObject(with: data) as? [String: Any]
+        else { return }
         let files = payload["files"] as? [String] ?? []
         let env = payload["env"] as? [String: String]
         if let env {
@@ -203,21 +206,26 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
     private func addDebugOverlayMenuItem() {
         guard let mainMenu = NSApp.mainMenu,
-              let viewMenu = mainMenu.items.first(where: { $0.title == "View" })?.submenu
+            let viewMenu = mainMenu.items.first(where: { $0.title == "View" })?.submenu
         else { return }
         viewMenu.addItem(NSMenuItem.separator())
-        viewMenu.addItem(NSMenuItem(title: "Toggle Debug Overlay",
-                                     action: #selector(NvimView.toggleDebugOverlay(_:)),
-                                     keyEquivalent: ""))
+        viewMenu.addItem(
+            NSMenuItem(
+                title: "Toggle Debug Overlay",
+                action: #selector(NvimView.toggleDebugOverlay(_:)),
+                keyEquivalent: ""))
     }
 
     private func addProfilePickerMenuItem() {
         guard let mainMenu = NSApp.mainMenu,
-              let fileMenu = mainMenu.items.first(where: { $0.title == "File" })?.submenu
+            let fileMenu = mainMenu.items.first(where: { $0.title == "File" })?.submenu
         else { return }
 
         // Find "New" item (Cmd+N) and insert our item after it.
-        let newItemIndex = fileMenu.items.firstIndex(where: { $0.keyEquivalent == "n" && $0.keyEquivalentModifierMask == .command }) ?? 0
+        let newItemIndex =
+            fileMenu.items.firstIndex(where: {
+                $0.keyEquivalent == "n" && $0.keyEquivalentModifierMask == .command
+            }) ?? 0
 
         let pickerItem = NSMenuItem(
             title: "New Window with Profile…",

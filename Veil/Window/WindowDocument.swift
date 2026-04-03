@@ -45,7 +45,7 @@ class WindowDocument: NSDocument, NvimViewDelegate {
 
     override var displayName: String! {
         get { "Veil" }
-        set { }
+        set {}
     }
 
     override func makeWindowControllers() {
@@ -65,11 +65,13 @@ class WindowDocument: NSDocument, NvimViewDelegate {
     private func startNvim() async {
         if !nvimArgs.isEmpty { titleReady = true }
         do {
-            let cwd = nvimEnv?["PWD"]
+            let cwd =
+                nvimEnv?["PWD"]
                 ?? ProcessInfo.processInfo.environment["PWD"]
                 ?? NSHomeDirectory()
-            try await channel.start(nvimPath: "", cwd: cwd, appName: profile.name,
-                                    extraArgs: nvimArgs, env: nvimEnv)
+            try await channel.start(
+                nvimPath: "", cwd: cwd, appName: profile.name,
+                extraArgs: nvimArgs, env: nvimEnv)
             guard let nvimView else { return }
             let gridSize = nvimView.gridSizeForViewSize(nvimView.bounds.size)
             try await channel.uiAttach(width: gridSize.cols, height: gridSize.rows)
@@ -82,10 +84,10 @@ class WindowDocument: NSDocument, NvimViewDelegate {
             let (_, apiInfo) = await channel.request("nvim_get_api_info", params: [])
             if let channelId = apiInfo.arrayValue?.first?.intValue {
                 try? await channel.command(
-                    "augroup VeilApp | autocmd! | " +
-                    "autocmd BufEnter * call rpcnotify(\(channelId), 'VeilAppBufChanged') | " +
-                    "autocmd TabEnter * call rpcnotify(\(channelId), 'VeilAppBufChanged') | " +
-                    "augroup END"
+                    "augroup VeilApp | autocmd! | "
+                        + "autocmd BufEnter * call rpcnotify(\(channelId), 'VeilAppBufChanged') | "
+                        + "autocmd TabEnter * call rpcnotify(\(channelId), 'VeilAppBufChanged') | "
+                        + "augroup END"
                 )
             }
 
@@ -127,7 +129,8 @@ class WindowDocument: NSDocument, NvimViewDelegate {
                         if let nvimView {
                             let newGridSize = nvimView.gridSizeForViewSize(nvimView.bounds.size)
                             Task {
-                                await channel.uiTryResize(width: newGridSize.cols, height: newGridSize.rows)
+                                await channel.uiTryResize(
+                                    width: newGridSize.cols, height: newGridSize.rows)
                             }
                         }
                     }
@@ -139,7 +142,10 @@ class WindowDocument: NSDocument, NvimViewDelegate {
         }
     }
 
-    override func canClose(withDelegate delegate: Any, shouldClose shouldCloseSelector: Selector?, contextInfo: UnsafeMutableRawPointer?) {
+    override func canClose(
+        withDelegate delegate: Any, shouldClose shouldCloseSelector: Selector?,
+        contextInfo: UnsafeMutableRawPointer?
+    ) {
         Task { @MainActor in
             // Send :confirm qa — nvim will prompt inside the terminal if unsaved buffers exist
             try? await channel.command("confirm qa")
@@ -149,7 +155,9 @@ class WindowDocument: NSDocument, NvimViewDelegate {
         // Tell NSDocument NOT to close right now
         if let selector = shouldCloseSelector {
             let obj = delegate as AnyObject
-            typealias ShouldCloseFunc = @convention(c) (AnyObject, Selector, AnyObject, Bool, UnsafeMutableRawPointer?) -> Void
+            typealias ShouldCloseFunc =
+                @convention(c) (AnyObject, Selector, AnyObject, Bool, UnsafeMutableRawPointer?) ->
+                Void
             let imp = obj.method(for: selector)
             let fn = unsafeBitCast(imp, to: ShouldCloseFunc.self)
             fn(obj, selector, self, false, contextInfo)

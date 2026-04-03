@@ -5,9 +5,9 @@ import QuartzCore
 
 nonisolated final class MetalRenderer {
     struct Vertex {
-        var position: SIMD2<Float>   // pixel position
-        var texCoord: SIMD2<Float>   // UV in atlas
-        var bgColor: SIMD4<Float>    // background color
+        var position: SIMD2<Float>  // pixel position
+        var texCoord: SIMD2<Float>  // UV in atlas
+        var bgColor: SIMD4<Float>  // background color
     }
 
     let device: MTLDevice
@@ -66,14 +66,16 @@ nonisolated final class MetalRenderer {
 
     // MARK: - Rendering
 
-    func render(cells: [[Cell]], attributes: [Int: CellAttributes],
-                rows: Int, cols: Int,
-                atlas: GlyphAtlas, font: NSFont, cellSize: CGSize,
-                gridTopPadding: CGFloat, defaultFg: Int, defaultBg: Int,
-                cursorPosition: Position, cursorShape: ModeInfo.CursorShape,
-                cursorCellPercentage: Int,
-                debugOverlay: String?,
-                in metalLayer: CAMetalLayer) {
+    func render(
+        cells: [[Cell]], attributes: [Int: CellAttributes],
+        rows: Int, cols: Int,
+        atlas: GlyphAtlas, font: NSFont, cellSize: CGSize,
+        gridTopPadding: CGFloat, defaultFg: Int, defaultBg: Int,
+        cursorPosition: Position, cursorShape: ModeInfo.CursorShape,
+        cursorCellPercentage: Int,
+        debugOverlay: String?,
+        in metalLayer: CAMetalLayer
+    ) {
         guard let drawable = metalLayer.nextDrawable() else { return }
         guard rows > 0, cols > 0, cells.count >= rows else { return }
 
@@ -119,8 +121,9 @@ nonisolated final class MetalRenderer {
 
                     if bg != defaultBg {
                         let quadW = cellW * Float(cellCount)
-                        addQuad(to: &vertices, x: x, y: y, w: quadW, h: cellH,
-                                region: emptyRegion, bgColor: colorToSIMD4(bg))
+                        addQuad(
+                            to: &vertices, x: x, y: y, w: quadW, h: cellH,
+                            region: emptyRegion, bgColor: colorToSIMD4(bg))
                     }
                     col += cellCount
                 }
@@ -150,10 +153,11 @@ nonisolated final class MetalRenderer {
                 let cellCount = isDoubleWidth ? 2 : 1
                 let allocatedW = cellW * Float(cellCount)
 
-                let region = atlas.region(text: text, font: font,
-                                          bold: attrs.bold, italic: attrs.italic,
-                                          fg: fg,
-                                          cellSize: cellSize, cellCount: cellCount)
+                let region = atlas.region(
+                    text: text, font: font,
+                    bold: attrs.bold, italic: attrs.italic,
+                    fg: fg,
+                    cellSize: cellSize, cellCount: cellCount)
 
                 let glyphW = region.drawWidth * Float(atlas.scale)
                 if glyphW > allocatedW {
@@ -162,16 +166,19 @@ nonisolated final class MetalRenderer {
                     let followedBySpace = nextCol < cols && cells[row][nextCol].text == " "
                     if followedBySpace {
                         // Overflow into the adjacent space (natural size)
-                        addQuad(to: &vertices, x: x, y: y, w: glyphW, h: cellH,
-                                region: region, bgColor: transparentBg)
+                        addQuad(
+                            to: &vertices, x: x, y: y, w: glyphW, h: cellH,
+                            region: region, bgColor: transparentBg)
                     } else {
                         // No room to overflow: squeeze into allocated width
-                        addQuad(to: &vertices, x: x, y: y, w: allocatedW, h: cellH,
-                                region: region, bgColor: transparentBg)
+                        addQuad(
+                            to: &vertices, x: x, y: y, w: allocatedW, h: cellH,
+                            region: region, bgColor: transparentBg)
                     }
                 } else {
-                    addQuad(to: &vertices, x: x, y: y, w: allocatedW, h: cellH,
-                            region: region, bgColor: transparentBg)
+                    addQuad(
+                        to: &vertices, x: x, y: y, w: allocatedW, h: cellH,
+                        region: region, bgColor: transparentBg)
                 }
 
                 col += cellCount
@@ -195,17 +202,22 @@ nonisolated final class MetalRenderer {
         }
         var cursorColor = colorToSIMD4(defaultFg)
         cursorColor.w = 0.5
-        addQuad(to: &vertices, x: cx, y: cy, w: cw, h: ch,
-                region: emptyRegion, bgColor: cursorColor)
+        addQuad(
+            to: &vertices, x: cx, y: cy, w: cw, h: ch,
+            region: emptyRegion, bgColor: cursorColor)
 
         guard !vertices.isEmpty else { return }
 
         let bufferSize = vertices.count * MemoryLayout<Vertex>.stride
-        guard let vertexBuffer = device.makeBuffer(bytes: vertices, length: bufferSize,
-                                                    options: .storageModeShared) else { return }
+        guard
+            let vertexBuffer = device.makeBuffer(
+                bytes: vertices, length: bufferSize,
+                options: .storageModeShared)
+        else { return }
 
-        var uniforms = SIMD2<Float>(Float(metalLayer.drawableSize.width),
-                                    Float(metalLayer.drawableSize.height))
+        var uniforms = SIMD2<Float>(
+            Float(metalLayer.drawableSize.width),
+            Float(metalLayer.drawableSize.height))
 
         let passDescriptor = MTLRenderPassDescriptor()
         passDescriptor.colorAttachments[0].texture = drawable.texture
@@ -219,7 +231,8 @@ nonisolated final class MetalRenderer {
         passDescriptor.colorAttachments[0].storeAction = .store
 
         guard let commandBuffer = commandQueue.makeCommandBuffer(),
-              let encoder = commandBuffer.makeRenderCommandEncoder(descriptor: passDescriptor) else { return }
+            let encoder = commandBuffer.makeRenderCommandEncoder(descriptor: passDescriptor)
+        else { return }
 
         encoder.setRenderPipelineState(pipelineState)
         encoder.setVertexBuffer(vertexBuffer, offset: 0, index: 0)
@@ -228,10 +241,11 @@ nonisolated final class MetalRenderer {
         encoder.drawPrimitives(type: .triangle, vertexStart: 0, vertexCount: vertices.count)
 
         if let debugOverlay {
-            renderDebugOverlay(text: debugOverlay, scale: scale,
-                               encoder: encoder,
-                               viewportWidth: Float(metalLayer.drawableSize.width),
-                               viewportHeight: Float(metalLayer.drawableSize.height))
+            renderDebugOverlay(
+                text: debugOverlay, scale: scale,
+                encoder: encoder,
+                viewportWidth: Float(metalLayer.drawableSize.width),
+                viewportHeight: Float(metalLayer.drawableSize.height))
         }
 
         encoder.endEncoding()
@@ -239,23 +253,43 @@ nonisolated final class MetalRenderer {
         commandBuffer.commit()
     }
 
-    private func addQuad(to vertices: inout [Vertex],
-                         x: Float, y: Float, w: Float, h: Float,
-                         region: GlyphAtlas.Region, bgColor: SIMD4<Float>) {
+    private func addQuad(
+        to vertices: inout [Vertex],
+        x: Float, y: Float, w: Float, h: Float,
+        region: GlyphAtlas.Region, bgColor: SIMD4<Float>
+    ) {
         // Two triangles forming a quad
-        vertices.append(Vertex(position: SIMD2(x, y), texCoord: SIMD2(region.u, region.v), bgColor: bgColor))
-        vertices.append(Vertex(position: SIMD2(x + w, y), texCoord: SIMD2(region.uMax, region.v), bgColor: bgColor))
-        vertices.append(Vertex(position: SIMD2(x, y + h), texCoord: SIMD2(region.u, region.vMax), bgColor: bgColor))
-        vertices.append(Vertex(position: SIMD2(x + w, y), texCoord: SIMD2(region.uMax, region.v), bgColor: bgColor))
-        vertices.append(Vertex(position: SIMD2(x + w, y + h), texCoord: SIMD2(region.uMax, region.vMax), bgColor: bgColor))
-        vertices.append(Vertex(position: SIMD2(x, y + h), texCoord: SIMD2(region.u, region.vMax), bgColor: bgColor))
+        vertices.append(
+            Vertex(position: SIMD2(x, y), texCoord: SIMD2(region.u, region.v), bgColor: bgColor))
+        vertices.append(
+            Vertex(
+                position: SIMD2(x + w, y), texCoord: SIMD2(region.uMax, region.v), bgColor: bgColor)
+        )
+        vertices.append(
+            Vertex(
+                position: SIMD2(x, y + h), texCoord: SIMD2(region.u, region.vMax), bgColor: bgColor)
+        )
+        vertices.append(
+            Vertex(
+                position: SIMD2(x + w, y), texCoord: SIMD2(region.uMax, region.v), bgColor: bgColor)
+        )
+        vertices.append(
+            Vertex(
+                position: SIMD2(x + w, y + h), texCoord: SIMD2(region.uMax, region.vMax),
+                bgColor: bgColor))
+        vertices.append(
+            Vertex(
+                position: SIMD2(x, y + h), texCoord: SIMD2(region.u, region.vMax), bgColor: bgColor)
+        )
     }
 
     // MARK: - Debug Overlay
 
-    private func renderDebugOverlay(text: String, scale: Float,
-                                     encoder: MTLRenderCommandEncoder,
-                                     viewportWidth: Float, viewportHeight: Float) {
+    private func renderDebugOverlay(
+        text: String, scale: Float,
+        encoder: MTLRenderCommandEncoder,
+        viewportWidth: Float, viewportHeight: Float
+    ) {
         // Render debug text into a CGImage using CoreText
         let font = NSFont.monospacedSystemFont(ofSize: 18, weight: .regular)
         let paragraphStyle = NSMutableParagraphStyle()
@@ -284,10 +318,13 @@ nonisolated final class MetalRenderer {
 
         // Render to CGContext
         let colorSpace = CGColorSpace(name: CGColorSpace.sRGB)!
-        guard let ctx = CGContext(data: nil, width: pixelW, height: pixelH,
-                                  bitsPerComponent: 8, bytesPerRow: pixelW * 4,
-                                  space: colorSpace,
-                                  bitmapInfo: CGImageAlphaInfo.premultipliedFirst.rawValue | CGBitmapInfo.byteOrder32Little.rawValue)
+        guard
+            let ctx = CGContext(
+                data: nil, width: pixelW, height: pixelH,
+                bitsPerComponent: 8, bytesPerRow: pixelW * 4,
+                space: colorSpace,
+                bitmapInfo: CGImageAlphaInfo.premultipliedFirst.rawValue
+                    | CGBitmapInfo.byteOrder32Little.rawValue)
         else { return }
 
         ctx.scaleBy(x: CGFloat(scale), y: CGFloat(scale))
@@ -306,7 +343,8 @@ nonisolated final class MetalRenderer {
         ctx.saveGState()
         ctx.translateBy(x: 0, y: height)
         ctx.scaleBy(x: 1, y: -1)
-        let drawRect = CGRect(x: padding, y: padding, width: textRect.width, height: textRect.height)
+        let drawRect = CGRect(
+            x: padding, y: padding, width: textRect.width, height: textRect.height)
         attrString.draw(in: drawRect)
         ctx.restoreGState()
         NSGraphicsContext.restoreGraphicsState()
@@ -314,16 +352,19 @@ nonisolated final class MetalRenderer {
         guard let image = ctx.makeImage() else { return }
 
         // Create temporary texture from rendered image
-        let texDesc = MTLTextureDescriptor.texture2DDescriptor(pixelFormat: .bgra8Unorm,
-                                                                width: pixelW, height: pixelH,
-                                                                mipmapped: false)
+        let texDesc = MTLTextureDescriptor.texture2DDescriptor(
+            pixelFormat: .bgra8Unorm,
+            width: pixelW, height: pixelH,
+            mipmapped: false)
         texDesc.usage = .shaderRead
         texDesc.storageMode = .shared
         guard let texture = device.makeTexture(descriptor: texDesc),
-              let data = image.dataProvider?.data,
-              let bytes = CFDataGetBytePtr(data) else { return }
-        texture.replace(region: MTLRegionMake2D(0, 0, pixelW, pixelH),
-                        mipmapLevel: 0, withBytes: bytes, bytesPerRow: pixelW * 4)
+            let data = image.dataProvider?.data,
+            let bytes = CFDataGetBytePtr(data)
+        else { return }
+        texture.replace(
+            region: MTLRegionMake2D(0, 0, pixelW, pixelH),
+            mipmapLevel: 0, withBytes: bytes, bytesPerRow: pixelW * 4)
 
         // Position at top-left with margin
         let margin: Float = 10 * scale
@@ -335,12 +376,16 @@ nonisolated final class MetalRenderer {
         // Draw overlay quad using the overlay texture
         var overlayVertices: [Vertex] = []
         let region = GlyphAtlas.Region(u: 0, v: 0, uMax: 1, vMax: 1, drawWidth: Float(width))
-        addQuad(to: &overlayVertices, x: x, y: y, w: quadW, h: quadH,
-                region: region, bgColor: SIMD4<Float>(0, 0, 0, 0))
+        addQuad(
+            to: &overlayVertices, x: x, y: y, w: quadW, h: quadH,
+            region: region, bgColor: SIMD4<Float>(0, 0, 0, 0))
 
         let bufferSize = overlayVertices.count * MemoryLayout<Vertex>.stride
-        guard let vertexBuffer = device.makeBuffer(bytes: overlayVertices, length: bufferSize,
-                                                    options: .storageModeShared) else { return }
+        guard
+            let vertexBuffer = device.makeBuffer(
+                bytes: overlayVertices, length: bufferSize,
+                options: .storageModeShared)
+        else { return }
 
         encoder.setVertexBuffer(vertexBuffer, offset: 0, index: 0)
         encoder.setFragmentTexture(texture, index: 0)

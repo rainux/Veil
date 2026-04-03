@@ -98,7 +98,9 @@ final class GridTests {
     }
 
     @Test func hlAttrDefine() {
-        let event = NvimEvent.hlAttrDefine(id: 42, rgbAttrs: ["foreground": .uint(0xAABBCC), "bold": .bool(true)], ctermAttrs: [:], info: [])
+        let event = NvimEvent.hlAttrDefine(
+            id: 42, rgbAttrs: ["foreground": .uint(0xAABBCC), "bold": .bool(true)], ctermAttrs: [:],
+            info: [])
         grid.apply(event)
         let attr = grid.attributes[42]
         #expect(attr != nil)

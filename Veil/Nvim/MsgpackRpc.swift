@@ -9,10 +9,12 @@ enum RpcMessage: Sendable {
 
 actor MsgpackRpc {
     private var nextMsgid: UInt32 = 0
-    private var pendingRequests: [UInt32: CheckedContinuation<(error: MessagePackValue, result: MessagePackValue), Never>] = [:]
+    private var pendingRequests:
+        [UInt32: CheckedContinuation<(error: MessagePackValue, result: MessagePackValue), Never>] =
+            [:]
     private var eventContinuation: AsyncStream<RpcMessage>.Continuation?
 
-    private let inPipe: FileHandle   // write to nvim stdin
+    private let inPipe: FileHandle  // write to nvim stdin
     private let outPipe: FileHandle  // read from nvim stdout
 
     lazy var notifications: AsyncStream<RpcMessage> = {
@@ -54,7 +56,9 @@ actor MsgpackRpc {
         pendingRequests.removeAll()
     }
 
-    func request(method: String, params: [MessagePackValue]) async -> (error: MessagePackValue, result: MessagePackValue) {
+    func request(method: String, params: [MessagePackValue]) async -> (
+        error: MessagePackValue, result: MessagePackValue
+    ) {
         let msgid = nextMsgid
         nextMsgid += 1
         let data = Self.encodeRequest(msgid: msgid, method: method, params: params)
@@ -71,14 +75,19 @@ actor MsgpackRpc {
                 try inPipe.write(contentsOf: data)
             } catch {
                 pendingRequests.removeValue(forKey: msgid)
-                continuation.resume(returning: (error: .string("write failed: \(error.localizedDescription)"), result: .nil))
+                continuation.resume(
+                    returning: (
+                        error: .string("write failed: \(error.localizedDescription)"), result: .nil
+                    ))
             }
         }
     }
 
     // MARK: - Static encode/decode (testable without actor)
 
-    nonisolated static func encodeRequest(msgid: UInt32, method: String, params: [MessagePackValue]) -> Data {
+    nonisolated static func encodeRequest(msgid: UInt32, method: String, params: [MessagePackValue])
+        -> Data
+    {
         let message: MessagePackValue = .array([
             .uint(0),
             .uint(UInt64(msgid)),
@@ -109,16 +118,18 @@ actor MsgpackRpc {
             guard let type = array[0].uint64Value else { continue }
 
             switch type {
-            case 0: // request
+            case 0:  // request
                 guard array.count >= 4,
-                      let msgid = array[1].uint64Value,
-                      let method = array[2].stringValue else { continue }
+                    let msgid = array[1].uint64Value,
+                    let method = array[2].stringValue
+                else { continue }
                 messages.append(.request(msgid: UInt32(msgid), method: method, params: array[3]))
-            case 1: // response
+            case 1:  // response
                 guard array.count >= 4,
-                      let msgid = array[1].uint64Value else { continue }
+                    let msgid = array[1].uint64Value
+                else { continue }
                 messages.append(.response(msgid: UInt32(msgid), error: array[2], result: array[3]))
-            case 2: // notification
+            case 2:  // notification
                 guard let method = array[1].stringValue else { continue }
                 messages.append(.notification(method: method, params: array[2]))
             default:

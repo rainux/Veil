@@ -21,7 +21,8 @@ nonisolated enum KeyUtils {
         return wrapWithModifiers(characters, modifiers: modifiers)
     }
 
-    private static func wrapWithModifiers(_ key: String, modifiers: NSEvent.ModifierFlags) -> String {
+    private static func wrapWithModifiers(_ key: String, modifiers: NSEvent.ModifierFlags) -> String
+    {
         var prefix = ""
         if modifiers.contains(.control) { prefix += "C-" }
         if modifiers.contains(.shift) { prefix += "S-" }

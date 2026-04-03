@@ -4,10 +4,10 @@ import CoreText
 
 nonisolated final class GlyphAtlas {
     struct Region {
-        let u: Float      // left UV (0-1)
-        let v: Float      // top UV (0-1)
-        let uMax: Float   // right UV
-        let vMax: Float   // bottom UV
+        let u: Float  // left UV (0-1)
+        let v: Float  // top UV (0-1)
+        let uMax: Float  // right UV
+        let vMax: Float  // bottom UV
         let drawWidth: Float  // actual rendered width in points (multiply by scale for pixels)
     }
 
@@ -44,11 +44,14 @@ nonisolated final class GlyphAtlas {
         FontFallback.probe()
     }
 
-    func region(text: String, font: NSFont, bold: Bool, italic: Bool,
-                fg: Int, cellSize: CGSize, cellCount: Int = 1) -> Region {
-        let key = Key(text: text, fontName: font.fontName, fontSize: font.pointSize,
-                      bold: bold, italic: italic, foreground: fg,
-                      cellCount: cellCount)
+    func region(
+        text: String, font: NSFont, bold: Bool, italic: Bool,
+        fg: Int, cellSize: CGSize, cellCount: Int = 1
+    ) -> Region {
+        let key = Key(
+            text: text, fontName: font.fontName, fontSize: font.pointSize,
+            bold: bold, italic: italic, foreground: fg,
+            cellCount: cellCount)
 
         if let existing = regions[key] { return existing }
 
@@ -94,14 +97,16 @@ nonisolated final class GlyphAtlas {
         }
 
         // Render glyph with transparent background
-        let imageData = renderGlyph(text: text, font: drawFont,
-                                     fg: fg, width: pixelW, height: pixelH,
-                                     drawWidth: renderWidth, cellHeight: cellSize.height)
+        let imageData = renderGlyph(
+            text: text, font: drawFont,
+            fg: fg, width: pixelW, height: pixelH,
+            drawWidth: renderWidth, cellHeight: cellSize.height)
 
         // Copy to atlas texture
         let mtlRegion = MTLRegionMake2D(nextX, nextY, pixelW, pixelH)
-        texture.replace(region: mtlRegion, mipmapLevel: 0,
-                        withBytes: imageData, bytesPerRow: pixelW * 4)
+        texture.replace(
+            region: mtlRegion, mipmapLevel: 0,
+            withBytes: imageData, bytesPerRow: pixelW * 4)
 
         // Calculate UV coordinates
         let uvRegion = Region(
@@ -141,17 +146,22 @@ nonisolated final class GlyphAtlas {
         return device.makeTexture(descriptor: descriptor)!
     }
 
-    private func renderGlyph(text: String, font: NSFont,
-                              fg: Int, width: Int, height: Int,
-                              drawWidth: CGFloat, cellHeight: CGFloat) -> [UInt8] {
+    private func renderGlyph(
+        text: String, font: NSFont,
+        fg: Int, width: Int, height: Int,
+        drawWidth: CGFloat, cellHeight: CGFloat
+    ) -> [UInt8] {
         let colorSpace = CGColorSpace(name: CGColorSpace.sRGB)!
         // premultipliedFirst + byteOrder32Little = BGRA byte order, matching .bgra8Unorm
-        guard let ctx = CGContext(
-            data: nil, width: width, height: height,
-            bitsPerComponent: 8, bytesPerRow: width * 4,
-            space: colorSpace,
-            bitmapInfo: CGImageAlphaInfo.premultipliedFirst.rawValue | CGBitmapInfo.byteOrder32Little.rawValue
-        ) else { return Array(repeating: 0, count: width * height * 4) }
+        guard
+            let ctx = CGContext(
+                data: nil, width: width, height: height,
+                bitsPerComponent: 8, bytesPerRow: width * 4,
+                space: colorSpace,
+                bitmapInfo: CGImageAlphaInfo.premultipliedFirst.rawValue
+                    | CGBitmapInfo.byteOrder32Little.rawValue
+            )
+        else { return Array(repeating: 0, count: width * height * 4) }
 
         ctx.scaleBy(x: scale, y: scale)
 
@@ -179,7 +189,9 @@ nonisolated final class GlyphAtlas {
 
         // Extract pixel data
         guard let data = ctx.data else { return Array(repeating: 0, count: width * height * 4) }
-        return Array(UnsafeBufferPointer(start: data.assumingMemoryBound(to: UInt8.self),
-                                         count: width * height * 4))
+        return Array(
+            UnsafeBufferPointer(
+                start: data.assumingMemoryBound(to: UInt8.self),
+                count: width * height * 4))
     }
 }

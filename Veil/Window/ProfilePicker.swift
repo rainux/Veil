@@ -132,7 +132,8 @@ private final class ProfilePickerPanel: NSPanel, NSTextFieldDelegate {
             searchField.trailingAnchor.constraint(equalTo: container.trailingAnchor, constant: -12),
             searchField.heightAnchor.constraint(equalToConstant: searchFieldHeight),
 
-            separator.topAnchor.constraint(equalTo: searchField.bottomAnchor, constant: padding / 2),
+            separator.topAnchor.constraint(
+                equalTo: searchField.bottomAnchor, constant: padding / 2),
             separator.leadingAnchor.constraint(equalTo: container.leadingAnchor),
             separator.trailingAnchor.constraint(equalTo: container.trailingAnchor),
 
@@ -177,7 +178,9 @@ private final class ProfilePickerPanel: NSPanel, NSTextFieldDelegate {
         applyFilter(searchField.stringValue)
     }
 
-    func control(_ control: NSControl, textView: NSTextView, doCommandBy commandSelector: Selector) -> Bool {
+    func control(_ control: NSControl, textView: NSTextView, doCommandBy commandSelector: Selector)
+        -> Bool
+    {
         switch commandSelector {
         case #selector(NSResponder.moveDown(_:)):
             moveSelection(by: 1)
@@ -208,7 +211,9 @@ private final class ProfilePickerPanel: NSPanel, NSTextFieldDelegate {
         if query.isEmpty {
             filteredProfiles = allProfiles
         } else {
-            filteredProfiles = allProfiles.filter { fuzzyMatch(query: query, target: $0.displayName) }
+            filteredProfiles = allProfiles.filter {
+                fuzzyMatch(query: query, target: $0.displayName)
+            }
         }
         selectedIndex = 0
         rebuildList()
@@ -236,7 +241,8 @@ private final class ProfilePickerPanel: NSPanel, NSTextFieldDelegate {
         itemViews.removeAll()
 
         for (index, profile) in filteredProfiles.enumerated() {
-            let item = ProfileItemView(title: profile.displayName, isSelected: index == selectedIndex)
+            let item = ProfileItemView(
+                title: profile.displayName, isSelected: index == selectedIndex)
             item.translatesAutoresizingMaskIntoConstraints = false
             item.heightAnchor.constraint(equalToConstant: itemHeight).isActive = true
             item.widthAnchor.constraint(equalToConstant: panelWidth).isActive = true
@@ -261,8 +267,10 @@ private final class ProfilePickerPanel: NSPanel, NSTextFieldDelegate {
         setFrame(frame, display: true, animate: false)
     }
 
-    private static func calculateHeight(itemCount: Int, itemHeight: CGFloat,
-                                         searchFieldHeight: CGFloat, padding: CGFloat) -> CGFloat {
+    private static func calculateHeight(
+        itemCount: Int, itemHeight: CGFloat,
+        searchFieldHeight: CGFloat, padding: CGFloat
+    ) -> CGFloat {
         let listHeight = CGFloat(max(itemCount, 1)) * itemHeight
         return searchFieldHeight + padding * 3 + listHeight
     }
