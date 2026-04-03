@@ -1,4 +1,5 @@
 import AppKit
+import CoreVideo
 import MessagePack
 
 class WindowDocument: NSDocument, NvimViewDelegate {
@@ -29,6 +30,13 @@ class WindowDocument: NSDocument, NvimViewDelegate {
     // set_title is already the correct filename. In this case titleReady starts
     // as true to avoid suppressing it.
     private var titleReady = false
+
+    /// Frame coalescing: set true on flush, cleared after render.
+    /// CVDisplayLink fires at screen refresh rate and only renders when dirty,
+    /// preventing main-thread vsync stalls when nvim flushes faster than 60fps.
+    private var needsRender = false
+    private var displayLink: CVDisplayLink?
+    private var displayLinkContext: Unmanaged<DisplayLinkContext>?
 
     private var windowController: WindowController? {
         windowControllers.first as? WindowController
@@ -100,17 +108,17 @@ class WindowDocument: NSDocument, NvimViewDelegate {
     }
 
     private func startEventLoop() {
+        startDisplayLink()
         eventLoopTask = Task { @MainActor in
             let events = channel.events
-            // Events arrive in batches (one array per redraw notification)
-            // to reduce actor isolation boundary crossings.
             for await batch in events {
                 for event in batch {
                     grid.apply(event)
                     switch event {
                     case .flush:
-                        nvimView?.render(grid: grid)
-                        grid.clearDirty()
+                        // Don't render immediately; mark dirty and let the
+                        // CVDisplayLink callback render at screen refresh rate.
+                        needsRender = true
                     case .setTitle(let title):
                         if titleReady {
                             windowController?.updateTitle(title)
@@ -146,6 +154,44 @@ class WindowDocument: NSDocument, NvimViewDelegate {
         }
     }
 
+    // MARK: - CVDisplayLink frame pacing
+
+    /// Start a CVDisplayLink that fires at screen refresh rate.
+    /// The callback dispatches to main thread where we check needsRender
+    /// and render at most once per vsync, coalescing multiple flushes.
+    private func startDisplayLink() {
+        var link: CVDisplayLink?
+        CVDisplayLinkCreateWithActiveCGDisplays(&link)
+        guard let link else { return }
+
+        let context = DisplayLinkContext(document: self)
+        let retained = Unmanaged.passRetained(context)
+        displayLinkContext = retained
+
+        CVDisplayLinkSetOutputCallback(link, displayLinkCallback, retained.toOpaque())
+        CVDisplayLinkStart(link)
+        displayLink = link
+    }
+
+    private func stopDisplayLink() {
+        if let link = displayLink {
+            CVDisplayLinkStop(link)
+            displayLink = nil
+        }
+        // Balance the passRetained from startDisplayLink
+        displayLinkContext?.release()
+        displayLinkContext = nil
+    }
+
+    /// Called from CVDisplayLink callback on main thread.
+    /// Renders at most once per vsync, coalescing all flushes since last frame.
+    fileprivate func displayLinkFired() {
+        guard needsRender else { return }
+        needsRender = false
+        nvimView?.render(grid: grid)
+        grid.clearDirty()
+    }
+
     override func canClose(
         withDelegate delegate: Any, shouldClose shouldCloseSelector: Selector?,
         contextInfo: UnsafeMutableRawPointer?
@@ -169,6 +215,7 @@ class WindowDocument: NSDocument, NvimViewDelegate {
     }
 
     override func close() {
+        stopDisplayLink()
         eventLoopTask?.cancel()
         Task { await channel.stop() }
         super.close()
@@ -193,4 +240,31 @@ class WindowDocument: NSDocument, NvimViewDelegate {
         guard gridSize.rows > 0, gridSize.cols > 0 else { return }
         Task { await channel.uiTryResize(width: gridSize.cols, height: gridSize.rows) }
     }
+}
+
+// MARK: - CVDisplayLink callback plumbing
+
+/// Prevent retain cycle: CVDisplayLink C callback captures a raw pointer
+/// to this context, which holds a weak reference back to the document.
+private final class DisplayLinkContext {
+    weak var document: WindowDocument?
+    init(document: WindowDocument) { self.document = document }
+}
+
+/// CVDisplayLink C function callback. Runs on a high-priority display thread,
+/// so we dispatch to main for the actual render (Metal/AppKit require it).
+private func displayLinkCallback(
+    _ displayLink: CVDisplayLink,
+    _ inNow: UnsafePointer<CVTimeStamp>,
+    _ inOutputTime: UnsafePointer<CVTimeStamp>,
+    _ flagsIn: CVOptionFlags,
+    _ flagsOut: UnsafeMutablePointer<CVOptionFlags>,
+    _ context: UnsafeMutableRawPointer?
+) -> CVReturn {
+    guard let context else { return kCVReturnSuccess }
+    let ctx = Unmanaged<DisplayLinkContext>.fromOpaque(context).takeUnretainedValue()
+    DispatchQueue.main.async {
+        ctx.document?.displayLinkFired()
+    }
+    return kCVReturnSuccess
 }
