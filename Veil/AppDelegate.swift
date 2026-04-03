@@ -1,7 +1,12 @@
 import Cocoa
 
-extension NSNotification.Name {
-    static let veilOpenFiles = NSNotification.Name("com.veil.openFiles")
+private let veilEventClass = AEEventClass(bitPattern: fourCharCode("Veil"))
+private let veilOpenEventID = AEEventID(bitPattern: fourCharCode("Open"))
+private let veilJSONParamKey = AEKeyword(bitPattern: fourCharCode("json"))
+
+private func fourCharCode(_ s: String) -> Int32 {
+    let chars = Array(s.utf8)
+    return Int32(chars[0]) << 24 | Int32(chars[1]) << 16 | Int32(chars[2]) << 8 | Int32(chars[3])
 }
 
 @main
@@ -28,48 +33,21 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
         // Enforce single instance. A second instance can be spawned by running
         // the binary directly from Terminal, `open -n`, or Spotlight. When that
-        // happens, forward any file arguments to the existing instance via
-        // DistributedNotificationCenter (not NSWorkspace, which validates file
-        // existence and shows a Finder alert for non-existent files — but nvim
-        // handles those gracefully as [New File] buffers).
-        //
-        // File paths are JSON-encoded in the notification's `object` parameter
-        // because macOS 10.15+ strips `userInfo` from cross-process distributed
-        // notifications for security reasons.
+        // happens, forward file arguments and environment to the existing
+        // instance via a custom Apple Event (point-to-point, system-guaranteed
+        // delivery). We avoid NSWorkspace for file forwarding because it
+        // validates file existence and shows a Finder alert for non-existent
+        // paths, but nvim handles those gracefully as [New File] buffers.
         let bundleId = Bundle.main.bundleIdentifier!
         let others = NSRunningApplication.runningApplications(withBundleIdentifier: bundleId)
             .filter { $0 != .current }
         if let existing = others.first {
-            // Resolve relative paths before forwarding — the existing instance
-            // has a different cwd, so "Makefile" would resolve to the wrong file.
-            let absolutePaths = initialCliArgs.map { URL(fileURLWithPath: $0).path }
-            // Forward NVIM_APPNAME so the existing instance opens the window
-            // with the correct nvim profile (e.g. NVIM_APPNAME=nvim-nvchad gvim).
-            let nvimAppName = ProcessInfo.processInfo.environment["NVIM_APPNAME"]
-            if !absolutePaths.isEmpty || nvimAppName != nil {
-                var payload: [String: Any] = [
-                    "files": absolutePaths,
-                    "env": ProcessInfo.processInfo.environment,
-                ]
-                if let nvimAppName { payload["nvimAppName"] = nvimAppName }
-                if let data = try? JSONSerialization.data(withJSONObject: payload),
-                    let json = String(data: data, encoding: .utf8)
-                {
-                    DistributedNotificationCenter.default().post(
-                        name: .veilOpenFiles, object: json
-                    )
-                }
-            }
-            existing.activate()
-            // Terminate immediately — no resources to clean up, notification
-            // already delivered, just get out of the way.
-            exit(0)
+            forwardToExistingInstance(existing)
         }
 
-        DistributedNotificationCenter.default().addObserver(
-            self, selector: #selector(handleOpenFilesNotification(_:)),
-            name: .veilOpenFiles, object: nil,
-            suspensionBehavior: .deliverImmediately
+        NSAppleEventManager.shared().setEventHandler(
+            self, andSelector: #selector(handleVeilOpenEvent(_:withReply:)),
+            forEventClass: veilEventClass, andEventID: veilOpenEventID
         )
 
         Task.detached { NvimProcess.warmUpEnvironment() }
@@ -188,8 +166,53 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         doc.showWindows()
     }
 
-    @objc private func handleOpenFilesNotification(_ notification: Notification) {
-        guard let json = notification.object as? String,
+    // MARK: - Single Instance Forwarding
+
+    /// Forward file arguments and environment to an existing Veil instance
+    /// via a custom Apple Event, then terminate. The JSON payload carries
+    /// file paths, the full shell environment, and NVIM_APPNAME so the
+    /// existing instance can open a new window with the correct nvim profile.
+    private func forwardToExistingInstance(_ existing: NSRunningApplication) -> Never {
+        // Resolve relative paths before forwarding — the existing instance
+        // has a different cwd, so "Makefile" would resolve to the wrong file.
+        let absolutePaths = initialCliArgs.map { URL(fileURLWithPath: $0).path }
+        // Forward NVIM_APPNAME so the existing instance opens the window
+        // with the correct nvim profile (e.g. NVIM_APPNAME=nvim-nvchad gvim).
+        let nvimAppName = ProcessInfo.processInfo.environment["NVIM_APPNAME"]
+        if !absolutePaths.isEmpty || nvimAppName != nil {
+            var payload: [String: Any] = [
+                "files": absolutePaths,
+                "env": ProcessInfo.processInfo.environment,
+            ]
+            if let nvimAppName { payload["nvimAppName"] = nvimAppName }
+            if let data = try? JSONSerialization.data(withJSONObject: payload),
+                let json = String(data: data, encoding: .utf8)
+            {
+                let target = NSAppleEventDescriptor(processIdentifier: existing.processIdentifier)
+                let event = NSAppleEventDescriptor(
+                    eventClass: veilEventClass,
+                    eventID: veilOpenEventID,
+                    targetDescriptor: target,
+                    returnID: AEReturnID(kAutoGenerateReturnID),
+                    transactionID: AETransactionID(kAnyTransactionID))
+                event.setParam(
+                    NSAppleEventDescriptor(string: json),
+                    forKeyword: veilJSONParamKey)
+                _ = try? event.sendEvent(
+                    options: .noReply,
+                    timeout: TimeInterval(kAEDefaultTimeout))
+            }
+        }
+        existing.activate()
+        // Terminate immediately — no resources to clean up, event
+        // already delivered, just get out of the way.
+        exit(0)
+    }
+
+    @objc private func handleVeilOpenEvent(
+        _ event: NSAppleEventDescriptor, withReply reply: NSAppleEventDescriptor
+    ) {
+        guard let json = event.paramDescriptor(forKeyword: veilJSONParamKey)?.stringValue,
             let data = json.data(using: .utf8),
             let payload = try? JSONSerialization.jsonObject(with: data) as? [String: Any]
         else { return }
