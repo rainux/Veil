@@ -13,9 +13,10 @@ class WindowController: NSWindowController, NSWindowDelegate {
             backing: .buffered, defer: false
         )
         window.title = "Veil"
-        window.center()
         if let frameString = UserDefaults.standard.string(forKey: "VeilWindowFrame") {
             window.setFrame(NSRectFromString(frameString), display: false)
+        } else if let screen = NSScreen.main {
+            window.setFrame(screen.visibleFrame, display: false)
         }
         window.isReleasedWhenClosed = false
         window.restorationClass = nil
