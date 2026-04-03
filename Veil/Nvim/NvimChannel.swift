@@ -54,6 +54,8 @@ actor NvimChannel {
                             }
                         } else if method == "VeilAppBufChanged" {
                             await self.yieldBatch([.veilBufChanged])
+                        } else if method == "VeilAppDebugToggle" {
+                            await self.yieldBatch([.veilDebugToggle])
                         }
                     }
                 }

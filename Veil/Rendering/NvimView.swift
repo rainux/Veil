@@ -159,6 +159,8 @@ final class NvimView: NSView {
                 Frame: \(String(format: "%.1f", lastFrameTime)) ms
                 Grid: \(grid.size.cols)×\(grid.size.rows)
                 Atlas: \(glyphAtlas.regionCount)
+                Font (guifont): \(gridFont.displayName ?? gridFont.fontName) \(String(format: "%.0f", gridFont.pointSize))pt
+                Nerd Font: \(FontFallback.nerdFontName ?? "none")
                 """ : nil
 
             metalRenderer.render(

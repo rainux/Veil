@@ -97,6 +97,9 @@ class WindowDocument: NSDocument, NvimViewDelegate {
                         + "autocmd TabEnter * call rpcnotify(\(channelId), 'VeilAppBufChanged') | "
                         + "augroup END"
                 )
+                try? await channel.command(
+                    "command! VeilAppDebugToggle call rpcnotify(\(channelId), 'VeilAppDebugToggle')"
+                )
             }
 
             // Enable nvim title — set_title events will be ignored until first BufEnter
@@ -125,6 +128,9 @@ class WindowDocument: NSDocument, NvimViewDelegate {
                         }
                     case .veilBufChanged:
                         titleReady = true
+                    case .veilDebugToggle:
+                        nvimView?.debugOverlayEnabled.toggle()
+                        needsRender = true
                     case .defaultColorsSet(let fg, let bg, _, _, _):
                         nvimView?.setDefaultColors(fg: fg, bg: bg)
                         windowController?.updateTitleBarColors(fg: fg, bg: bg)
