@@ -118,15 +118,40 @@ nonisolated final class MetalRenderer {
                 defaultFg: defaultFg, defaultBg: defaultBg)
         }
 
-        // Assemble final vertex array: all backgrounds first, then all foreground
-        // glyphs, so glyph quads always draw on top of background quads.
-        var vertices: [Vertex] = []
-        vertices.reserveCapacity(rows * cols * 6)
+        // Count total vertices across all row caches + cursor quad,
+        // then write directly into the Metal buffer to avoid assembling
+        // an intermediate Swift array and copying it a second time.
+        let cursorVertexCount = 6
+        var totalVertices = cursorVertexCount
         for row in 0..<rows {
-            vertices.append(contentsOf: rowBackgroundVertices[row])
+            totalVertices += rowBackgroundVertices[row].count
+            totalVertices += rowForegroundVertices[row].count
+        }
+        guard totalVertices > 0 else { return }
+
+        guard let vertexBuffer = ensureVertexBuffer(vertexCount: totalVertices) else { return }
+        let dst = vertexBuffer.contents().assumingMemoryBound(to: Vertex.self)
+        var offset = 0
+
+        // All backgrounds first, then all foreground glyphs, so glyph
+        // quads always draw on top of background quads.
+        for row in 0..<rows {
+            let bg = rowBackgroundVertices[row]
+            if !bg.isEmpty {
+                bg.withUnsafeBufferPointer { buf in
+                    dst.advanced(by: offset).update(from: buf.baseAddress!, count: buf.count)
+                }
+                offset += bg.count
+            }
         }
         for row in 0..<rows {
-            vertices.append(contentsOf: rowForegroundVertices[row])
+            let fg = rowForegroundVertices[row]
+            if !fg.isEmpty {
+                fg.withUnsafeBufferPointer { buf in
+                    dst.advanced(by: offset).update(from: buf.baseAddress!, count: buf.count)
+                }
+                offset += fg.count
+            }
         }
 
         // Cursor quad (always on top of everything)
@@ -147,15 +172,14 @@ nonisolated final class MetalRenderer {
         }
         var cursorColor = colorToSIMD4(defaultFg)
         cursorColor.w = 0.5
+        var cursorVerts: [Vertex] = []
         addQuad(
-            to: &vertices, x: cx, y: cy, w: cw, h: ch,
+            to: &cursorVerts, x: cx, y: cy, w: cw, h: ch,
             region: emptyRegion, bgColor: cursorColor)
-
-        guard !vertices.isEmpty else { return }
-
-        guard let vertexBuffer = ensureVertexBuffer(vertexCount: vertices.count) else { return }
-        let byteCount = vertices.count * MemoryLayout<Vertex>.stride
-        memcpy(vertexBuffer.contents(), &vertices, byteCount)
+        cursorVerts.withUnsafeBufferPointer { buf in
+            dst.advanced(by: offset).update(from: buf.baseAddress!, count: buf.count)
+        }
+        offset += cursorVerts.count
 
         var uniforms = SIMD2<Float>(
             Float(metalLayer.drawableSize.width),
@@ -180,7 +204,7 @@ nonisolated final class MetalRenderer {
         encoder.setVertexBuffer(vertexBuffer, offset: 0, index: 0)
         encoder.setVertexBytes(&uniforms, length: MemoryLayout<SIMD2<Float>>.size, index: 1)
         encoder.setFragmentTexture(atlas.texture, index: 0)
-        encoder.drawPrimitives(type: .triangle, vertexStart: 0, vertexCount: vertices.count)
+        encoder.drawPrimitives(type: .triangle, vertexStart: 0, vertexCount: offset)
 
         if let debugOverlay {
             renderDebugOverlay(
