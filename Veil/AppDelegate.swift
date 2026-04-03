@@ -86,13 +86,22 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     func application(_ sender: NSApplication, openFiles filenames: [String]) {
-        let doc = WindowDocument()
-        doc.profile = profileFromEnvironment()
-        doc.preferredRenderer = preferredRenderer
-        doc.nvimArgs = filenames
-        NSDocumentController.shared.addDocument(doc)
-        doc.makeWindowControllers()
-        doc.showWindows()
+        if !initialCliArgs.isEmpty {
+            // Cold start: macOS detected file arguments matching registered
+            // document types. The same files are already in initialCliArgs
+            // (parsed by CliArgParser), which also preserves nvim flags like
+            // -d that macOS strips. Let the deferred createWindow() handle
+            // everything so flags aren't lost.
+        } else {
+            // App already running (Finder Open With, drag to Dock icon).
+            let doc = WindowDocument()
+            doc.profile = profileFromEnvironment()
+            doc.preferredRenderer = preferredRenderer
+            doc.nvimArgs = filenames
+            NSDocumentController.shared.addDocument(doc)
+            doc.makeWindowControllers()
+            doc.showWindows()
+        }
         NSApp.reply(toOpenOrPrint: .success)
     }
 
