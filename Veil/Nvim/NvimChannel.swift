@@ -84,7 +84,7 @@ actor NvimChannel {
                 .map([
                     .string("rgb"): .bool(true),
                     .string("ext_linegrid"): .bool(true),
-                    .string("ext_tabline"): .bool(false),
+                    .string("ext_tabline"): .bool(true),
                     .string("ext_multigrid"): .bool(false),
                 ]),
             ])

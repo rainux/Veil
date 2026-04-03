@@ -48,8 +48,10 @@ class WindowController: NSWindowController, NSWindowDelegate {
         container.wantsLayer = true
         container.translatesAutoresizingMaskIntoConstraints = false
         nvimView.translatesAutoresizingMaskIntoConstraints = false
-        container.addSubview(titleLabel)
+        tablineView.translatesAutoresizingMaskIntoConstraints = false
+        container.addSubview(tablineView)
         container.addSubview(nvimView)
+        container.addSubview(titleLabel)
         window.contentView = container
 
         let titleBarHeight: CGFloat = 28
@@ -60,7 +62,12 @@ class WindowController: NSWindowController, NSWindowDelegate {
             titleLabel.widthAnchor.constraint(
                 lessThanOrEqualTo: container.widthAnchor, constant: -160),
 
-            nvimView.topAnchor.constraint(equalTo: container.topAnchor, constant: titleBarHeight),
+            tablineView.topAnchor.constraint(
+                equalTo: container.topAnchor, constant: titleBarHeight),
+            tablineView.leadingAnchor.constraint(equalTo: container.leadingAnchor),
+            tablineView.trailingAnchor.constraint(equalTo: container.trailingAnchor),
+
+            nvimView.topAnchor.constraint(equalTo: tablineView.bottomAnchor),
             nvimView.leadingAnchor.constraint(equalTo: container.leadingAnchor),
             nvimView.trailingAnchor.constraint(equalTo: container.trailingAnchor),
             nvimView.bottomAnchor.constraint(equalTo: container.bottomAnchor),

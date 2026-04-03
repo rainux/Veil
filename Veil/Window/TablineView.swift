@@ -12,6 +12,7 @@ class TablineView: NSView {
     var onSelectTab: ((Int) -> Void)?
 
     private let tabHeight: CGFloat = 28
+    private let maxTabWidth: CGFloat = 200
 
     private var heightConstraint: NSLayoutConstraint!
 
@@ -29,7 +30,7 @@ class TablineView: NSView {
         tabs = tabInfos.map { info in
             Tab(handle: info.handle, name: info.name, isSelected: info.handle == current)
         }
-        let newHeight: CGFloat = tabs.count > 1 ? tabHeight : 0
+        let newHeight: CGFloat = tabHeight
         if heightConstraint.constant != newHeight {
             heightConstraint.constant = newHeight
         }
@@ -37,13 +38,13 @@ class TablineView: NSView {
     }
 
     override func draw(_ dirtyRect: NSRect) {
-        guard tabs.count > 1 else { return }
+        guard !tabs.isEmpty else { return }
 
         let bg = NSColor.windowBackgroundColor
         bg.setFill()
         dirtyRect.fill()
 
-        let tabWidth = bounds.width / CGFloat(tabs.count)
+        let tabWidth = min(bounds.width / CGFloat(tabs.count), maxTabWidth)
 
         for (i, tab) in tabs.enumerated() {
             let rect = CGRect(x: CGFloat(i) * tabWidth, y: 0, width: tabWidth, height: tabHeight)
@@ -98,12 +99,11 @@ class TablineView: NSView {
     }
 
     override func mouseDown(with event: NSEvent) {
-        guard tabs.count > 1 else { return }
         let loc = convert(event.locationInWindow, from: nil)
-        let tabWidth = bounds.width / CGFloat(tabs.count)
+        let tabWidth = min(bounds.width / CGFloat(tabs.count), maxTabWidth)
         let index = Int(loc.x / tabWidth)
         if index >= 0, index < tabs.count {
-            onSelectTab?(index)
+            onSelectTab?(tabs[index].handle)
         }
     }
 }

@@ -85,6 +85,17 @@ class WindowDocument: NSDocument, NvimViewDelegate {
             try await channel.uiAttach(width: gridSize.cols, height: gridSize.rows)
             startEventLoop()
 
+            let channel = self.channel!
+            windowController?.tablineView.onSelectTab = { [weak self] handle in
+                guard self != nil else { return }
+                Task {
+                    _ = await channel.request(
+                        "nvim_set_current_tabpage",
+                        params: [.int(Int64(handle))]
+                    )
+                }
+            }
+
             // Register autocmds AFTER uiAttach — the initial BufEnter fires
             // during nvim startup (before this point), so it's intentionally
             // missed. This keeps titleReady false, suppressing the ugly initial
@@ -137,7 +148,13 @@ class WindowDocument: NSDocument, NvimViewDelegate {
                         needsRender = true
                     case .setTitle(let title):
                         if titleReady {
-                            windowController?.updateTitle(title)
+                            // Replace nvim's hardcoded "- Nvim" suffix with "- Veil"
+                            // when the user hasn't customized titlestring.
+                            let displayTitle =
+                                title.hasSuffix(" - Nvim")
+                                ? String(title.dropLast(6)) + " - Veil"
+                                : title
+                            windowController?.updateTitle(displayTitle)
                         }
                     case .veilBufChanged:
                         titleReady = true
@@ -149,6 +166,8 @@ class WindowDocument: NSDocument, NvimViewDelegate {
                             NSPasteboard.general.clearContents()
                             NSPasteboard.general.setString(text, forType: .string)
                         }
+                    case .tablineUpdate(let current, let tabs):
+                        windowController?.tablineView.update(current: current, tabInfos: tabs)
                     case .defaultColorsSet(let fg, let bg, _, _, _):
                         nvimView?.setDefaultColors(fg: fg, bg: bg)
                         windowController?.updateTitleBarColors(fg: fg, bg: bg)
