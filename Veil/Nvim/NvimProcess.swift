@@ -108,13 +108,19 @@ nonisolated final class NvimProcess: @unchecked Sendable {
     static func warmUpEnvironment() { _ = cachedEnv }
 
     private static func captureLoginShellEnvironment() -> [String: String] {
+        captureShellEnvironment(shellArgs: ["-l"])
+    }
+
+    private static func captureInteractiveShellEnvironment() -> [String: String] {
+        captureShellEnvironment(shellArgs: ["-l", "-i"])
+    }
+
+    private static func captureShellEnvironment(shellArgs: [String]) -> [String: String] {
         let shellPath = ProcessInfo.processInfo.environment["SHELL"] ?? "/bin/zsh"
         let process = Process()
         process.executableURL = URL(fileURLWithPath: shellPath)
         let marker = UUID().uuidString
-        // Login shell only (-l). Skip interactive (-i) which is usually slow.
-        // Login profile provides the correct PATH.
-        process.arguments = ["-l", "-c", "echo \(marker) && env"]
+        process.arguments = shellArgs + ["-c", "echo \(marker) && env"]
         let pipe = Pipe()
         process.standardOutput = pipe
         process.standardError = FileHandle.nullDevice
@@ -143,18 +149,63 @@ nonisolated final class NvimProcess: @unchecked Sendable {
 
     // MARK: - Binary resolution
 
+    private static let nvimPathDefaultsKey = "cachedNvimPath"
+
+    /// Resolve the nvim binary path with a layered strategy that balances
+    /// reliability and performance:
+    ///
+    /// 1. UserDefaults cache — zero overhead on subsequent launches. Verified
+    ///    on each launch (executable check); stale entries trigger re-detection.
+    /// 2. Login shell (-l) — fast, covers Homebrew/Nix/Cargo users who
+    ///    configure PATH in .zprofile or .zshenv.
+    /// 3. Interactive login shell (-l -i) — slow, but picks up tools like mise
+    ///    and nvm that only activate in .zshrc. The cost is paid once; the
+    ///    result is cached for all future launches.
+    /// 4. Well-known paths — last resort if both shells fail (e.g. broken
+    ///    shell config). Checks Homebrew (ARM/Intel) and MacPorts locations.
     private func resolveNvimBinary() -> String {
+        // Explicit path from caller
         if !nvimPath.isEmpty, FileManager.default.isExecutableFile(atPath: nvimPath) {
             return nvimPath
         }
-        // Search using cachedEnv PATH (from user's login shell), not the
-        // process environment PATH (launchd's minimal PATH that lacks
-        // Homebrew, nix, cargo, etc.).
-        if let path = Self.findInPath("nvim", in: Self.cachedEnv["PATH"]) { return path }
-        for candidate in ["/opt/homebrew/bin/nvim", "/usr/local/bin/nvim"] {
-            if FileManager.default.isExecutableFile(atPath: candidate) { return candidate }
+
+        // Cached path from previous detection
+        if let cached = UserDefaults.standard.string(forKey: Self.nvimPathDefaultsKey),
+            FileManager.default.isExecutableFile(atPath: cached)
+        {
+            return cached
+        }
+
+        // Phase 1 (fast): cachedEnv lazily spawns a login shell (-l) on first access,
+        // covers users who set PATH in .zprofile
+        let loginEnv = Self.cachedEnv
+        if let path = Self.findInPath("nvim", in: loginEnv["PATH"]) {
+            Self.cacheNvimPath(path)
+            return path
+        }
+
+        // Phase 2: interactive login shell (slow, covers mise/nvm in .zshrc)
+        let interactiveEnv = Self.captureInteractiveShellEnvironment()
+        if let path = Self.findInPath("nvim", in: interactiveEnv["PATH"]) {
+            Self.envLock.lock()
+            Self._cachedEnv = interactiveEnv
+            Self.envLock.unlock()
+            Self.cacheNvimPath(path)
+            return path
+        }
+
+        // Well-known candidates
+        for candidate in ["/opt/homebrew/bin/nvim", "/usr/local/bin/nvim", "/opt/local/bin/nvim"] {
+            if FileManager.default.isExecutableFile(atPath: candidate) {
+                Self.cacheNvimPath(candidate)
+                return candidate
+            }
         }
         return "/usr/local/bin/nvim"
+    }
+
+    private static func cacheNvimPath(_ path: String) {
+        UserDefaults.standard.set(path, forKey: nvimPathDefaultsKey)
     }
 
     private static func findInPath(_ binary: String, in pathString: String?) -> String? {
