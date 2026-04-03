@@ -104,16 +104,20 @@ actor MsgpackRpc {
 
     nonisolated static func decodeAccumulated(data: inout Data) throws -> [RpcMessage] {
         var messages: [RpcMessage] = []
-        while !data.isEmpty {
+        // Pass the shrinking remainder through the loop instead of copying
+        // it back into `data` on each iteration. Only update `data` once
+        // at the end to discard consumed bytes.
+        var remaining = data
+        while !remaining.isEmpty {
             let value: MessagePackValue
-            let remainder: Data
+            let next: Data
             do {
-                (value, remainder) = try unpack(data)
+                (value, next) = try unpack(remaining)
             } catch {
-                // Incomplete data — stop decoding, leave data as-is
+                // Incomplete data — stop decoding, leave remainder as-is
                 break
             }
-            data = Data(remainder)
+            remaining = next
             guard let array = value.arrayValue, array.count >= 3 else { continue }
             guard let type = array[0].uint64Value else { continue }
 
@@ -136,6 +140,7 @@ actor MsgpackRpc {
                 continue
             }
         }
+        data = remaining
         return messages
     }
 }
