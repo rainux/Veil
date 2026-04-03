@@ -159,14 +159,20 @@ nonisolated final class MetalRenderer {
         let emptyRegion = GlyphAtlas.Region(u: 0, v: 0, uMax: 0, vMax: 0, drawWidth: 0)
         let cx = Float(cursorPosition.col) * cellW
         var cy = topPad + Float(cursorPosition.row) * cellH
-        var cw = cellW
+        let cursorRow = cursorPosition.row
+        let cursorCol = cursorPosition.col
+        let isDoubleWidth =
+            cursorRow < rows && cursorCol + 1 < cols
+            && cells[cursorRow][cursorCol + 1].text.isEmpty
+        let cursorCellW = isDoubleWidth ? cellW * 2 : cellW
+        var cw = cursorCellW
         var ch = cellH
         let pct = Float(max(10, cursorCellPercentage)) / 100.0
         switch cursorShape {
         case .block:
             break
         case .vertical:
-            cw = max(2 * scale, cellW * pct)
+            cw = max(2 * scale, cursorCellW * pct)
         case .horizontal:
             ch = max(2 * scale, cellH * pct)
             cy += cellH - ch  // Anchor horizontal bar at bottom of cell
