@@ -2,6 +2,9 @@ import AppKit
 import MessagePack
 
 class WindowController: NSWindowController, NSWindowDelegate {
+    private static let titleBarBrightnessOffset: CGFloat = -0.08
+    private static let tabBarBrightnessOffset: CGFloat = 0.05
+
     let nvimView = NvimView(frame: .zero)
     let tablineView = TablineView(frame: .zero)
     private(set) var customTitleLabel: NSTextField?
@@ -32,7 +35,8 @@ class WindowController: NSWindowController, NSWindowDelegate {
         // the editing area without clashing with the colorscheme.
         let defaults = UserDefaults.standard
         let cachedBg = defaults.object(forKey: "VeilDefaultBg") as? Int ?? 0x1E1E2E
-        window.backgroundColor = NSColor(rgb: Self.darkenColor(cachedBg, factor: 0.75))
+        window.backgroundColor = NSColor(
+            rgb: Self.tintedGray(from: cachedBg, offset: Self.titleBarBrightnessOffset))
 
         self.init(window: window)
         window.delegate = self
@@ -74,6 +78,9 @@ class WindowController: NSWindowController, NSWindowDelegate {
         ])
 
         customTitleLabel = titleLabel
+        tablineView.bgColor = NSColor(
+            rgb: Self.tintedGray(from: cachedBg, offset: Self.tabBarBrightnessOffset))
+        tablineView.fgColor = NSColor(rgb: cachedFg)
         window.makeFirstResponder(nvimView)
     }
 
@@ -83,18 +90,41 @@ class WindowController: NSWindowController, NSWindowDelegate {
     }
 
     func updateTitleBarColors(fg: Int, bg: Int) {
-        let titleBg = Self.darkenColor(bg, factor: 0.75)
+        let titleBg = Self.tintedGray(from: bg, offset: Self.titleBarBrightnessOffset)
+        let tabBg = Self.tintedGray(from: bg, offset: Self.tabBarBrightnessOffset)
         window?.backgroundColor = NSColor(rgb: titleBg)
         customTitleLabel?.textColor = NSColor(rgb: fg)
+        tablineView.bgColor = NSColor(rgb: tabBg)
+        tablineView.fgColor = NSColor(rgb: fg)
+        tablineView.needsDisplay = true
         UserDefaults.standard.set(fg, forKey: "VeilDefaultFg")
         UserDefaults.standard.set(bg, forKey: "VeilDefaultBg")
     }
 
-    private static func darkenColor(_ rgb: Int, factor: CGFloat) -> Int {
-        let r = Int(CGFloat((rgb >> 16) & 0xFF) * factor)
-        let g = Int(CGFloat((rgb >> 8) & 0xFF) * factor)
-        let b = Int(CGFloat(rgb & 0xFF) * factor)
-        return (r << 16) | (g << 8) | b
+    /// Extract the hue from an RGB color and return a new color with the same
+    /// tint but brightness nudged toward the middle. Dark backgrounds get
+    /// slightly brighter, light backgrounds get slightly darker. This keeps
+    /// the tab bar visually distinct from both the title bar and content area
+    /// regardless of colorscheme.
+    private static func tintedGray(from rgb: Int, offset: CGFloat = 0.08) -> Int {
+        let r = CGFloat((rgb >> 16) & 0xFF) / 255
+        let g = CGFloat((rgb >> 8) & 0xFF) / 255
+        let b = CGFloat(rgb & 0xFF) / 255
+        let nsColor = NSColor(red: r, green: g, blue: b, alpha: 1)
+        var h: CGFloat = 0, s: CGFloat = 0, bri: CGFloat = 0
+        if let c = nsColor.usingColorSpace(.deviceRGB) {
+            h = c.hueComponent
+            s = c.saturationComponent
+            bri = c.brightnessComponent
+        }
+        // Nudge brightness toward middle: dark gets brighter, light gets darker
+        let newBri = bri < 0.5 ? bri + offset : bri - offset
+        let tinted = NSColor(
+            hue: h, saturation: s, brightness: max(0, min(1, newBri)), alpha: 1)
+        let rr = Int(tinted.redComponent * 255)
+        let gg = Int(tinted.greenComponent * 255)
+        let bb = Int(tinted.blueComponent * 255)
+        return (rr << 16) | (gg << 8) | bb
     }
 
     func windowDidResize(_ notification: Notification) {

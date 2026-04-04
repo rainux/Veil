@@ -10,6 +10,8 @@ class TablineView: NSView {
 
     private(set) var tabs: [Tab] = []
     var onSelectTab: ((Int) -> Void)?
+    var bgColor: NSColor = NSColor.windowBackgroundColor
+    var fgColor: NSColor = NSColor.labelColor
 
     private let tabHeight: CGFloat = 28
     private let maxTabWidth: CGFloat = 200
@@ -40,9 +42,18 @@ class TablineView: NSView {
     override func draw(_ dirtyRect: NSRect) {
         guard !tabs.isEmpty else { return }
 
-        let bg = NSColor.windowBackgroundColor
-        bg.setFill()
-        dirtyRect.fill()
+        bgColor.setFill()
+        bounds.fill()
+
+        // Titlebar shadow: subtle gradient at the top of the tab bar
+        let shadowHeight: CGFloat = 3
+        let shadowRect = NSRect(
+            x: 0, y: bounds.maxY - shadowHeight, width: bounds.width, height: shadowHeight)
+        if let gradient = NSGradient(
+            starting: NSColor.black.withAlphaComponent(0.15), ending: .clear)
+        {
+            gradient.draw(in: shadowRect, angle: 270)
+        }
 
         let tabWidth = min(bounds.width / CGFloat(tabs.count), maxTabWidth)
 
@@ -51,10 +62,13 @@ class TablineView: NSView {
 
             if tab.isSelected {
                 NSColor.controlAccentColor.withAlphaComponent(0.2).setFill()
+                let rounded = NSBezierPath(
+                    roundedRect: rect.insetBy(dx: 2, dy: 3), xRadius: 3, yRadius: 3)
+                rounded.fill()
             } else {
-                NSColor.controlBackgroundColor.setFill()
+                bgColor.setFill()
+                rect.fill()
             }
-            rect.fill()
 
             // Draw separator (skip if either adjacent tab is selected)
             if i > 0, !tab.isSelected, !tabs[i - 1].isSelected {
@@ -67,11 +81,12 @@ class TablineView: NSView {
             }
 
             // Draw title
-            let baseName = tab.name.isEmpty ? "Tab \(i + 1)" : (tab.name as NSString).lastPathComponent
+            let baseName =
+                tab.name.isEmpty ? "Tab \(i + 1)" : (tab.name as NSString).lastPathComponent
             let title = "\(i + 1). \(baseName)"
             let attrs: [NSAttributedString.Key: Any] = [
-                .font: NSFont.systemFont(ofSize: 14, weight: tab.isSelected ? .medium : .regular),
-                .foregroundColor: NSColor.labelColor,
+                .font: NSFont.systemFont(ofSize: 14, weight: .regular),
+                .foregroundColor: fgColor,
             ]
             let size = title.size(withAttributes: attrs)
             let textRect = CGRect(
