@@ -154,8 +154,9 @@ class WindowDocument: NSDocument, NvimViewDelegate {
             }
         }
 
-        let (_, apiInfo) = await channel.request("nvim_get_api_info", params: [])
-        if let channelId = apiInfo.arrayValue?.first?.intValue {
+        let (_, chanInfo) = await channel.request(
+            "nvim_get_chan_info", params: [.int(0)])
+        if let channelId = chanInfo.dictionaryValue?[.string("id")]?.intValue, channelId > 0 {
             try? await channel.command(
                 "augroup VeilApp | autocmd! | "
                     + "autocmd BufEnter * call rpcnotify(\(channelId), 'VeilAppBufChanged') | "
@@ -168,6 +169,10 @@ class WindowDocument: NSDocument, NvimViewDelegate {
             try? await channel.command(
                 "command! VeilAppDebugCopy call rpcnotify(\(channelId), 'VeilAppDebugCopy')"
             )
+
+            if await channel.isRemote {
+                await injectClipboardProvider(channelId: channelId)
+            }
         }
 
         let (_, versionResult) = await channel.request(
@@ -176,6 +181,45 @@ class WindowDocument: NSDocument, NvimViewDelegate {
             let firstLine = output.split(separator: "\n").first
         {
             nvimView?.nvimVersion = String(firstLine)
+        }
+    }
+
+    /// In remote mode, inject a g:clipboard provider that routes clipboard
+    /// operations through RPC back to the local Mac pasteboard.
+    private func injectClipboardProvider(channelId: Int) async {
+        let (_, existsResult) = await channel.request(
+            "nvim_eval", params: [.string("exists('g:clipboard')")])
+        if existsResult.intValue == 1 { return }
+
+        let lua = """
+            vim.g.clipboard = {
+              name = 'VeilClipboard',
+              copy = {
+                ['+'] = function(lines, regtype)
+                  vim.rpcrequest(\(channelId), 'VeilAppClipboardSet', lines, regtype)
+                end,
+                ['*'] = function(lines, regtype)
+                  vim.rpcrequest(\(channelId), 'VeilAppClipboardSet', lines, regtype)
+                end,
+              },
+              paste = {
+                ['+'] = function()
+                  return vim.rpcrequest(\(channelId), 'VeilAppClipboardGet')
+                end,
+                ['*'] = function()
+                  return vim.rpcrequest(\(channelId), 'VeilAppClipboardGet')
+                end,
+              },
+            }
+            -- Force reload clipboard provider so it picks up the new g:clipboard
+            package.loaded['vim.provider.clipboard'] = nil
+            vim.g.loaded_clipboard_provider = nil
+            vim.cmd('runtime autoload/provider/clipboard.vim')
+            """
+        let (clipErr, _) = await channel.request(
+            "nvim_exec_lua", params: [.string(lua), .array([])])
+        if clipErr != .nil {
+            NSLog("Veil: clipboard provider injection failed: %@", "\(clipErr)")
         }
     }
 

@@ -75,7 +75,24 @@ actor MsgpackRpc {
         }
     }
 
+    func respond(msgid: UInt32, error: MessagePackValue = .nil, result: MessagePackValue) {
+        let data = Self.encodeResponse(msgid: msgid, error: error, result: result)
+        try? transport.write(data)
+    }
+
     // MARK: - Static encode/decode (testable without actor)
+
+    nonisolated static func encodeResponse(
+        msgid: UInt32, error: MessagePackValue, result: MessagePackValue
+    ) -> Data {
+        let message: MessagePackValue = .array([
+            .uint(1),
+            .uint(UInt64(msgid)),
+            error,
+            result,
+        ])
+        return pack(message)
+    }
 
     nonisolated static func encodeRequest(msgid: UInt32, method: String, params: [MessagePackValue])
         -> Data

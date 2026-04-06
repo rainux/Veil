@@ -1,3 +1,4 @@
+import AppKit
 import Foundation
 import MessagePack
 
@@ -60,21 +61,28 @@ actor NvimChannel {
                 group.addTask { await rpc.start() }
                 group.addTask {
                     for await message in notifications {
-                        guard case .notification(let method, let params) = message else { continue }
-                        if method == "redraw" {
-                            guard let args = params.arrayValue else { continue }
-                            let events = NvimEvent.parse(redrawArgs: args)
-                            // Yield entire redraw batch at once to amortize
-                            // actor isolation crossing overhead.
-                            if !events.isEmpty {
-                                await self.yieldBatch(events)
+                        switch message {
+                        case .notification(let method, let params):
+                            if method == "redraw" {
+                                guard let args = params.arrayValue else { continue }
+                                let events = NvimEvent.parse(redrawArgs: args)
+                                // Yield entire redraw batch at once to amortize
+                                // actor isolation crossing overhead.
+                                if !events.isEmpty {
+                                    await self.yieldBatch(events)
+                                }
+                            } else if method == "VeilAppBufChanged" {
+                                await self.yieldBatch([.veilBufChanged])
+                            } else if method == "VeilAppDebugToggle" {
+                                await self.yieldBatch([.veilDebugToggle])
+                            } else if method == "VeilAppDebugCopy" {
+                                await self.yieldBatch([.veilDebugCopy])
                             }
-                        } else if method == "VeilAppBufChanged" {
-                            await self.yieldBatch([.veilBufChanged])
-                        } else if method == "VeilAppDebugToggle" {
-                            await self.yieldBatch([.veilDebugToggle])
-                        } else if method == "VeilAppDebugCopy" {
-                            await self.yieldBatch([.veilDebugCopy])
+                        case .request(let msgid, let method, let params):
+                            await self.handleRequest(
+                                rpc: rpc, msgid: msgid, method: method, params: params)
+                        case .response:
+                            break
                         }
                     }
                 }
@@ -139,6 +147,56 @@ actor NvimChannel {
                 .string(button), .string(action), .string(modifier),
                 .int(Int64(grid)), .int(Int64(row)), .int(Int64(col)),
             ])
+    }
+
+    private func handleRequest(
+        rpc: MsgpackRpc, msgid: UInt32, method: String, params: MessagePackValue
+    ) async {
+        switch method {
+        case "VeilAppClipboardSet":
+            guard let args = params.arrayValue, args.count >= 2,
+                let lines = args[0].arrayValue?.compactMap({ $0.stringValue }),
+                args[1].stringValue != nil
+            else {
+                await rpc.respond(
+                    msgid: msgid,
+                    error: .string("VeilAppClipboardSet: invalid params"),
+                    result: .nil)
+                return
+            }
+            let text = lines.joined(separator: "\n")
+            writePasteboard(text)
+            await rpc.respond(msgid: msgid, result: .bool(true))
+
+        case "VeilAppClipboardGet":
+            let text = readPasteboard()
+            let lines: [MessagePackValue] = text.split(
+                separator: "\n", omittingEmptySubsequences: false
+            ).map { .string(String($0)) }
+            let regtype: MessagePackValue = text.hasSuffix("\n") ? .string("V") : .string("v")
+            await rpc.respond(msgid: msgid, result: .array([.array(lines), regtype]))
+
+        default:
+            await rpc.respond(
+                msgid: msgid,
+                error: .string("Unknown method: \(method)"),
+                result: .nil)
+        }
+    }
+
+    /// Write a string to the system pasteboard. Must run on the main thread.
+    private nonisolated func writePasteboard(_ text: String) {
+        DispatchQueue.main.sync {
+            NSPasteboard.general.clearContents()
+            NSPasteboard.general.setString(text, forType: .string)
+        }
+    }
+
+    /// Read a string from the system pasteboard. Must run on the main thread.
+    private nonisolated func readPasteboard() -> String {
+        DispatchQueue.main.sync {
+            NSPasteboard.general.string(forType: .string) ?? ""
+        }
     }
 
     var nvimPath: String { process?.resolvedNvimPath ?? "" }
