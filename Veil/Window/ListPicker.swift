@@ -77,10 +77,18 @@ private final class ListPickerPanel: NSPanel, NSTextFieldDelegate {
     private let searchFieldHeight: CGFloat = 28
     private let titleLabelHeight: CGFloat = 24
 
-    private var hasSubtitles: Bool { allSubtitles != nil }
-
-    private var effectiveItemHeight: CGFloat {
-        hasSubtitles ? subtitleItemHeight : itemHeight
+    /// Per-row height: rows with a non-empty subtitle get the taller height
+    /// to fit title + subtitle stacked; others get the compact single-line
+    /// height. Static because it's called during init before self is fully
+    /// initialized, so it can't access instance properties directly.
+    private static func heightForItem(
+        at index: Int, subtitles: [String]?,
+        itemHeight: CGFloat, subtitleItemHeight: CGFloat
+    ) -> CGFloat {
+        if let subtitles, !subtitles[index].isEmpty {
+            return subtitleItemHeight
+        }
+        return itemHeight
     }
 
     init(
@@ -94,9 +102,15 @@ private final class ListPickerPanel: NSPanel, NSTextFieldDelegate {
         self.filteredIndices = Array(titles.indices)
         self.onDone = onDone
 
-        let rowHeight = subtitles != nil ? subtitleItemHeight : itemHeight
+        let ih = itemHeight
+        let sih = subtitleItemHeight
+        let listHeight = titles.indices.reduce(CGFloat(0)) {
+            $0
+                + Self.heightForItem(
+                    at: $1, subtitles: subtitles, itemHeight: ih, subtitleItemHeight: sih)
+        }
         let panelHeight = Self.calculateHeight(
-            itemCount: titles.count, itemHeight: rowHeight,
+            listHeight: listHeight,
             searchFieldHeight: searchFieldHeight, titleLabelHeight: titleLabelHeight,
             padding: padding
         )
@@ -189,19 +203,6 @@ private final class ListPickerPanel: NSPanel, NSTextFieldDelegate {
 
     // MARK: - Keyboard
 
-    override func keyDown(with event: NSEvent) {
-        let isCtrl = event.modifierFlags.contains(.control)
-        let chars = event.charactersIgnoringModifiers ?? ""
-
-        if isCtrl && chars == "n" {
-            moveSelection(by: 1)
-        } else if isCtrl && chars == "p" {
-            moveSelection(by: -1)
-        } else {
-            super.keyDown(with: event)
-        }
-    }
-
     override func cancelOperation(_ sender: Any?) {
         dismiss(nil)
     }
@@ -217,6 +218,20 @@ private final class ListPickerPanel: NSPanel, NSTextFieldDelegate {
     func control(_ control: NSControl, textView: NSTextView, doCommandBy commandSelector: Selector)
         -> Bool
     {
+        // Vim-style Ctrl+N/P and Ctrl+J/K for list navigation. These keys
+        // get intercepted by the text input system before keyDown, so we
+        // catch them here via the original event instead.
+        if let event = NSApp.currentEvent, event.modifierFlags.contains(.control) {
+            let chars = event.charactersIgnoringModifiers ?? ""
+            if chars == "n" || chars == "j" {
+                moveSelection(by: 1)
+                return true
+            } else if chars == "p" || chars == "k" {
+                moveSelection(by: -1)
+                return true
+            }
+        }
+
         switch commandSelector {
         case #selector(NSResponder.moveDown(_:)):
             moveSelection(by: 1)
@@ -287,7 +302,11 @@ private final class ListPickerPanel: NSPanel, NSTextFieldDelegate {
                 isSelected: position == selectedIndex
             )
             item.translatesAutoresizingMaskIntoConstraints = false
-            item.heightAnchor.constraint(equalToConstant: effectiveItemHeight).isActive = true
+            item.heightAnchor.constraint(
+                equalToConstant: Self.heightForItem(
+                    at: originalIndex, subtitles: allSubtitles,
+                    itemHeight: itemHeight, subtitleItemHeight: subtitleItemHeight)
+            ).isActive = true
             item.widthAnchor.constraint(equalToConstant: panelWidth).isActive = true
             item.onClicked = { [weak self] in
                 self?.selectedIndex = position
@@ -299,8 +318,14 @@ private final class ListPickerPanel: NSPanel, NSTextFieldDelegate {
     }
 
     private func resizeToFit() {
+        let listHeight = filteredIndices.reduce(CGFloat(0)) {
+            $0
+                + Self.heightForItem(
+                    at: $1, subtitles: allSubtitles,
+                    itemHeight: itemHeight, subtitleItemHeight: subtitleItemHeight)
+        }
         let newHeight = Self.calculateHeight(
-            itemCount: filteredIndices.count, itemHeight: effectiveItemHeight,
+            listHeight: listHeight,
             searchFieldHeight: searchFieldHeight, titleLabelHeight: titleLabelHeight,
             padding: padding
         )
@@ -312,12 +337,12 @@ private final class ListPickerPanel: NSPanel, NSTextFieldDelegate {
     }
 
     private static func calculateHeight(
-        itemCount: Int, itemHeight: CGFloat,
+        listHeight: CGFloat,
         searchFieldHeight: CGFloat, titleLabelHeight: CGFloat,
         padding: CGFloat
     ) -> CGFloat {
-        let listHeight = CGFloat(max(itemCount, 1)) * itemHeight
-        return titleLabelHeight + searchFieldHeight + padding * 4 + listHeight
+        let effectiveListHeight = max(listHeight, 32)
+        return titleLabelHeight + searchFieldHeight + padding * 4 + effectiveListHeight
     }
 
     // MARK: - Selection
@@ -359,7 +384,8 @@ private final class ListPickerItemView: NSView {
 
     init(title: String, subtitle: String?, isSelected: Bool) {
         self.titleLabel = NSTextField(labelWithString: title)
-        self.subtitleLabel = subtitle.map { NSTextField(labelWithString: $0) }
+        let effectiveSubtitle = subtitle?.isEmpty == false ? subtitle : nil
+        self.subtitleLabel = effectiveSubtitle.map { NSTextField(labelWithString: $0) }
         self.isSelected = isSelected
         super.init(frame: .zero)
 
@@ -374,13 +400,17 @@ private final class ListPickerItemView: NSView {
             subtitleLabel.translatesAutoresizingMaskIntoConstraints = false
             addSubview(subtitleLabel)
 
+            // Stack title + subtitle vertically, centered as a group
+            let spacing: CGFloat = 1
             NSLayoutConstraint.activate([
-                titleLabel.topAnchor.constraint(equalTo: topAnchor, constant: 5),
+                titleLabel.bottomAnchor.constraint(
+                    equalTo: centerYAnchor, constant: -spacing / 2),
                 titleLabel.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 16),
                 titleLabel.trailingAnchor.constraint(
                     lessThanOrEqualTo: trailingAnchor, constant: -16),
 
-                subtitleLabel.topAnchor.constraint(equalTo: titleLabel.bottomAnchor, constant: 1),
+                subtitleLabel.topAnchor.constraint(
+                    equalTo: centerYAnchor, constant: spacing / 2),
                 subtitleLabel.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 16),
                 subtitleLabel.trailingAnchor.constraint(
                     lessThanOrEqualTo: trailingAnchor, constant: -16),

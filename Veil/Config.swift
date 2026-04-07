@@ -44,6 +44,13 @@ extension DecodableDefault {
     enum TabBarBrightness: Source { static var defaultValue: CGFloat { 0.05 } }
 }
 
+// MARK: - RemoteEntry
+
+struct RemoteEntry: Decodable {
+    let name: String
+    let address: String
+}
+
 // MARK: - VeilConfig
 
 struct VeilConfig: Decodable {
@@ -61,6 +68,8 @@ struct VeilConfig: Decodable {
     var titlebar_brightness_offset: CGFloat
     @DecodableDefault.Wrapper<DecodableDefault.TabBarBrightness>
     var tabbar_brightness_offset: CGFloat
+
+    var remote: [RemoteEntry]?
 
     static var current: VeilConfig = load()
 

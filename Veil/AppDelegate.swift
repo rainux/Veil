@@ -263,7 +263,19 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     /// Shift+Ctrl+Cmd+N: connect to a remote nvim instance.
+    /// Shows a picker if veil.toml has [[remote]] entries,
+    /// otherwise falls through to the manual address input alert.
     @objc func connectToRemote(_ sender: Any?) {
+        RemotePicker.pick(in: NSApp.keyWindow) { [self] address in
+            if let address {
+                openRemoteConnection(to: address)
+            } else {
+                promptForRemoteAddress()
+            }
+        }
+    }
+
+    private func promptForRemoteAddress() {
         let alert = NSAlert()
         alert.messageText = "Connect to Remote Neovim"
         alert.informativeText = "Enter the address of a running nvim instance (host:port):"
@@ -279,6 +291,10 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         let address = input.stringValue.trimmingCharacters(in: .whitespaces)
         guard !address.isEmpty else { return }
 
+        openRemoteConnection(to: address)
+    }
+
+    private func openRemoteConnection(to address: String) {
         let doc = WindowDocument()
         doc.preferredRenderer = preferredRenderer
         doc.isRemote = true
