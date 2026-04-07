@@ -9,6 +9,7 @@
 /* Begin PBXBuildFile section */
 		D8BEFE202F79B31500CDE7C3 /* MessagePack in Frameworks */ = {isa = PBXBuildFile; productRef = E1000002AAAAAA0000000001 /* MessagePack */; };
 		D8BEFE212F79B31500CDE7C3 /* MessagePack in Frameworks */ = {isa = PBXBuildFile; productRef = E1000003AAAAAA0000000001 /* MessagePack */; };
+		E2000004BBBBBB0000000001 /* TOML in Frameworks */ = {isa = PBXBuildFile; productRef = E2000002BBBBBB0000000001 /* TOML */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -58,6 +59,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				D8BEFE202F79B31500CDE7C3 /* MessagePack in Frameworks */,
+				E2000004BBBBBB0000000001 /* TOML in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -121,6 +123,7 @@
 			name = Veil;
 			packageProductDependencies = (
 				E1000002AAAAAA0000000001 /* MessagePack */,
+				E2000002BBBBBB0000000001 /* TOML */,
 			);
 			productName = Veil;
 			productReference = D8BEFDEE2F7999A900CDE7C3 /* Veil.app */;
@@ -207,6 +210,7 @@
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
 				E1000001AAAAAA0000000001 /* XCRemoteSwiftPackageReference "MessagePack" */,
+				E2000001BBBBBB0000000001 /* XCRemoteSwiftPackageReference "swift-toml" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = D8BEFDEF2F7999A900CDE7C3 /* Products */;
@@ -629,6 +633,14 @@
 				minimumVersion = 4.1.0;
 			};
 		};
+		E2000001BBBBBB0000000001 /* XCRemoteSwiftPackageReference "swift-toml" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/mattt/swift-toml";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 2.0.0;
+			};
+		};
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
@@ -641,6 +653,11 @@
 			isa = XCSwiftPackageProductDependency;
 			package = E1000001AAAAAA0000000001 /* XCRemoteSwiftPackageReference "MessagePack" */;
 			productName = MessagePack;
+		};
+		E2000002BBBBBB0000000001 /* TOML */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = E2000001BBBBBB0000000001 /* XCRemoteSwiftPackageReference "swift-toml" */;
+			productName = TOML;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

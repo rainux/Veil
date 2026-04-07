@@ -112,6 +112,10 @@ Everything else (including other Cmd+key and all Ctrl+key combinations) is sent 
 vim.keymap.set('n', '<D-p>', Snacks.picker.files)
 ```
 
+### Configuration
+
+Veil reads settings from `~/.config/veil/veil.toml`. All fields are optional and have sensible defaults. See [`veil.sample.toml`](veil.sample.toml) for the full reference.
+
 ### Debug
 
 Veil registers two commands in Neovim for rendering diagnostics:

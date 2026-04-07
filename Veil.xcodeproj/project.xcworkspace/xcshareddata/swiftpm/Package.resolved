@@ -1,5 +1,5 @@
 {
-  "originHash" : "806276858f9dd769e7880931998a8082da3acda346a039fd5c7ffe0a897fc0c9",
+  "originHash" : "420d7e0bb10e6c1db8fd0d560a688bb4cc9547771cc495b966d0af24dd030eb4",
   "pins" : [
     {
       "identity" : "messagepack.swift",
@@ -8,6 +8,15 @@
       "state" : {
         "revision" : "e5e7708911a1032f0fa120c38292797734f4160c",
         "version" : "4.1.0"
+      }
+    },
+    {
+      "identity" : "swift-toml",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/mattt/swift-toml",
+      "state" : {
+        "revision" : "827506c90475e82d5a7f191f950fb3025cbdc0d6",
+        "version" : "2.0.0"
       }
     }
   ],

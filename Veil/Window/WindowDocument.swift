@@ -118,7 +118,7 @@ class WindowDocument: NSDocument, NvimViewDelegate {
                 ?? ProcessInfo.processInfo.environment["PWD"]
                 ?? NSHomeDirectory()
             try await channel.start(
-                nvimPath: "", cwd: cwd, appName: profile.name,
+                nvimPath: VeilConfig.current.nvim_path, cwd: cwd, appName: profile.name,
                 extraArgs: nvimArgs, env: nvimEnv)
             guard let nvimView else { return }
             let gridSize = nvimView.gridSizeForViewSize(nvimView.bounds.size)

@@ -2,8 +2,12 @@ import AppKit
 import MessagePack
 
 class WindowController: NSWindowController, NSWindowDelegate {
-    private static let titleBarBrightnessOffset: CGFloat = -0.08
-    private static let tabBarBrightnessOffset: CGFloat = 0.05
+    private static var titleBarBrightnessOffset: CGFloat {
+        VeilConfig.current.titlebar_brightness_offset
+    }
+    private static var tabBarBrightnessOffset: CGFloat {
+        VeilConfig.current.tabbar_brightness_offset
+    }
 
     let nvimView = NvimView(frame: .zero)
     let tablineView = TablineView(frame: .zero)

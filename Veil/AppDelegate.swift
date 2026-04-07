@@ -26,7 +26,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     var preferredRenderer: NvimView.Renderer { parsedArgs.renderer }
 
     func applicationDidFinishLaunching(_ aNotification: Notification) {
-        ligaturesEnabled = parsedArgs.ligatures
+        ligaturesEnabled = VeilConfig.current.ligatures
 
         // Writing to a closed pipe sends SIGPIPE, which terminates the process
         // by default. This happens when nvim exits but an RPC call is still

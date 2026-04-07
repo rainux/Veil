@@ -5,7 +5,6 @@ enum CliArgParser {
     struct Result {
         var nvimArgs: [String] = []
         var renderer: NvimView.Renderer = .metal
-        var ligatures: Bool = true
     }
 
     static func parse(_ rawArgs: [String]) -> Result {
@@ -24,8 +23,6 @@ enum CliArgParser {
                 case "--veil-renderer":
                     let value = (inlineValue ?? iter.next())?.lowercased()
                     if value == "coretext" { result.renderer = .coretext }
-                case "--veil-no-ligatures":
-                    result.ligatures = false
                 default:
                     break
                 }

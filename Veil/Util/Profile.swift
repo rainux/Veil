@@ -4,7 +4,12 @@ struct Profile: Codable, Hashable, Sendable {
     let name: String
     var displayName: String
 
-    static let `default` = Profile(name: "nvim", displayName: "Default")
+    static var `default`: Profile {
+        let name =
+            VeilConfig.current.nvim_appname.isEmpty ? "nvim" : VeilConfig.current.nvim_appname
+        let displayName = name == "nvim" ? "Default" : name
+        return Profile(name: name, displayName: displayName)
+    }
 
     func hash(into hasher: inout Hasher) { hasher.combine(name) }
     static func == (lhs: Profile, rhs: Profile) -> Bool { lhs.name == rhs.name }

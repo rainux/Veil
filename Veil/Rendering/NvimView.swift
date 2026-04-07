@@ -290,7 +290,7 @@ final class NvimView: NSView {
         glyphAtlas?.invalidate()
     }
 
-    private static let lineHeightMultiplier: CGFloat = 1.2
+    private static var lineHeightMultiplier: CGFloat { VeilConfig.current.line_height }
     static let gridTopPadding: CGFloat = 8
 
     private static func computeCellSize(for font: NSFont) -> CGSize {

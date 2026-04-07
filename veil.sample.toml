@@ -1,0 +1,28 @@
+# Veil configuration file
+# Copy to ~/.config/veil/veil.toml to customize.
+
+# Line height multiplier for the editor grid.
+# A value of 1.2 is recommended for comfortable reading.
+# line_height = 1.2
+
+# Enable font ligatures (e.g. -> becomes →  in supported fonts).
+# ligatures = true
+
+# Path to the nvim binary. Veil uses multi-layer automatic detection
+# (cached path, login shell PATH, common Homebrew locations) which
+# works in the vast majority of cases. Only set this if automatic
+# detection resolves to a binary you don't want.
+# nvim_path = ""
+
+# Default NVIM_APPNAME for new windows. Leave empty to use "nvim".
+# nvim_appname = ""
+
+# By default, Veil shows a native tab bar only when no tabline plugin
+# is detected (i.e. vim.o.tabline is empty). Set this to true to
+# always use the native tab bar regardless of tabline plugins.
+# force_native_tabs = false
+
+# Brightness offset for the title bar and tab bar, relative to the
+# colorscheme background. Positive values lighten, negative values darken.
+# titlebar_brightness_offset = -0.08
+# tabbar_brightness_offset = 0.05
