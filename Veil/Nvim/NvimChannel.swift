@@ -101,7 +101,7 @@ actor NvimChannel {
         eventContinuation?.finish()
     }
 
-    func uiAttach(width: Int, height: Int) async throws {
+    func uiAttach(width: Int, height: Int, nativeTabs: Bool) async throws {
         let (error, _) = await request(
             "nvim_ui_attach",
             params: [
@@ -109,7 +109,7 @@ actor NvimChannel {
                 .map([
                     .string("rgb"): .bool(true),
                     .string("ext_linegrid"): .bool(true),
-                    .string("ext_tabline"): .bool(true),
+                    .string("ext_tabline"): .bool(nativeTabs),
                     .string("ext_multigrid"): .bool(false),
                 ]),
             ])

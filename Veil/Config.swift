@@ -63,7 +63,7 @@ struct VeilConfig: Decodable {
     @DecodableDefault.Wrapper<DecodableDefault.EmptyString>
     var nvim_appname: String
     @DecodableDefault.Wrapper<DecodableDefault.False>
-    var force_native_tabs: Bool
+    var native_tabs: Bool
     @DecodableDefault.Wrapper<DecodableDefault.TitleBarBrightness>
     var titlebar_brightness_offset: CGFloat
     @DecodableDefault.Wrapper<DecodableDefault.TabBarBrightness>

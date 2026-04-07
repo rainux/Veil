@@ -86,7 +86,9 @@ class WindowDocument: NSDocument, NvimViewDelegate {
             try await channel.connectRemote(host: host, port: port)
             guard let nvimView else { return }
             let gridSize = nvimView.gridSizeForViewSize(nvimView.bounds.size)
-            try await channel.uiAttach(width: gridSize.cols, height: gridSize.rows)
+            try await channel.uiAttach(
+                width: gridSize.cols, height: gridSize.rows,
+                nativeTabs: VeilConfig.current.native_tabs)
             startEventLoop()
             await setupNvimIntegration()
             nvimView.remoteAddress = address
@@ -122,7 +124,9 @@ class WindowDocument: NSDocument, NvimViewDelegate {
                 extraArgs: nvimArgs, env: nvimEnv)
             guard let nvimView else { return }
             let gridSize = nvimView.gridSizeForViewSize(nvimView.bounds.size)
-            try await channel.uiAttach(width: gridSize.cols, height: gridSize.rows)
+            try await channel.uiAttach(
+                width: gridSize.cols, height: gridSize.rows,
+                nativeTabs: VeilConfig.current.native_tabs)
             startEventLoop()
 
             // Register autocmds AFTER uiAttach. The initial BufEnter fires
