@@ -191,11 +191,18 @@ class WindowDocument: NSDocument, NvimViewDelegate {
     /// In remote mode, inject a g:clipboard provider that routes clipboard
     /// operations through RPC back to the local Mac pasteboard.
     private func injectClipboardProvider(channelId: Int) async {
+        // If g:clipboard exists but g:VeilAppClipboardInjected is absent,
+        // the user configured their own provider and we should not override it.
+        // If we injected it previously (e.g. prior connection), re-inject with
+        // the new channel ID so rpcrequest targets the current connection.
         let (_, existsResult) = await channel.request(
-            "nvim_eval", params: [.string("exists('g:clipboard')")])
+            "nvim_eval",
+            params: [.string("exists('g:clipboard') && !exists('g:VeilAppClipboardInjected')")]
+        )
         if existsResult.intValue == 1 { return }
 
         let lua = """
+            vim.g.VeilAppClipboardInjected = true
             vim.g.clipboard = {
               name = 'VeilClipboard',
               copy = {
