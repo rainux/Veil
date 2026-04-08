@@ -315,16 +315,20 @@ class WindowDocument: NSDocument, NvimViewDelegate {
     // MARK: - Version
 
     private static func hasUpdate() -> Bool {
-        guard let latest = UpdateChecker.latestVersion else { return false }
-        // Strip build metadata (e.g. "0.6+8ece710-dirty" → "0.6")
-        let current = BuildVersion.version.split(separator: "+").first.map(String.init) ?? BuildVersion.version
-        return latest != current
+        let current =
+            Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "unknown"
+        if let latest = UpdateChecker.latestVersion {
+            return latest != current
+        }
+        return false
     }
 
     private static func versionSummary(nvimVersion: String? = nil) -> String {
+        let current =
+            Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "unknown"
         var msg = ""
         if let nvimVersion { msg += "\(nvimVersion), " }
-        msg += "Veil v\(BuildVersion.version)"
+        msg += "Veil v\(current)"
         return msg
     }
 
