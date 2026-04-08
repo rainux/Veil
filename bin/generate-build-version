@@ -1,0 +1,31 @@
+#!/bin/sh
+# Generate Veil/BuildVersion.swift from git describe.
+# Called by the "Generate BuildVersion" Xcode build phase.
+
+RAW=$(git describe --tags --always --dirty 2>/dev/null || echo "dev")
+RAW="${RAW#v}"
+# Convert git describe format (0.6-3-g8ece710-dirty) to semver build metadata (0.6+8ece710-dirty)
+case "$RAW" in
+  *-*-g*)
+    TAG="${RAW%%-*}"
+    HASH="${RAW#*-*-g}"
+    VERSION="${TAG}+${HASH}"
+    ;;
+  *)
+    VERSION="$RAW"
+    ;;
+esac
+
+NEW_CONTENT="enum BuildVersion {
+  static let version = \"${VERSION}\"
+}
+"
+
+OUTPUT="${SRCROOT:-$(dirname "$0")/..}/Veil/BuildVersion.swift"
+if [ -f "$OUTPUT" ]; then
+  OLD_CONTENT=$(cat "$OUTPUT")
+  if [ "$OLD_CONTENT" = "$NEW_CONTENT" ]; then
+    exit 0
+  fi
+fi
+printf '%s' "$NEW_CONTENT" > "$OUTPUT"

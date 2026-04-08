@@ -108,6 +108,7 @@
 			isa = PBXNativeTarget;
 			buildConfigurationList = D8BEFE102F7999AA00CDE7C3 /* Build configuration list for PBXNativeTarget "Veil" */;
 			buildPhases = (
+				A1B2C3D4E5F6A7B8C9D0E1F2 /* Generate BuildVersion */,
 				D8BEFDEA2F7999A900CDE7C3 /* Sources */,
 				D8BEFDEB2F7999A900CDE7C3 /* Frameworks */,
 				D8BEFDEC2F7999A900CDE7C3 /* Resources */,
@@ -249,6 +250,25 @@
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXShellScriptBuildPhase section */
+		A1B2C3D4E5F6A7B8C9D0E1F2 /* Generate BuildVersion */ = {
+			isa = PBXShellScriptBuildPhase;
+			alwaysOutOfDate = 1;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+			);
+			outputFileListPaths = (
+			);
+			outputPaths = (
+				"$(SRCROOT)/Veil/BuildVersion.swift",
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "\"${SRCROOT}/bin/generate-build-version\"\n";
+		};
 		D8FC685F2F7A33780067D7EA /* ShellScript */ = {
 			isa = PBXShellScriptBuildPhase;
 			alwaysOutOfDate = 1;

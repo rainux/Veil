@@ -70,3 +70,6 @@ buildServer.json
 
 .claude/settings.local.json
 homebrew-veil/
+
+# Generated at build time by "Generate BuildVersion" script phase
+Veil/BuildVersion.swift
