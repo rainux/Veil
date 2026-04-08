@@ -106,6 +106,10 @@ These Cmd+key shortcuts are handled by Veil:
 | Cmd+M            | Minimize                              |
 | Cmd+\`           | Cycle windows                         |
 | Cmd+1-9          | Switch tab (9 = last)                 |
+| Ctrl+Tab         | Next tab                              |
+| Shift+Ctrl+Tab   | Previous tab                          |
+| Shift+Cmd+]      | Next tab                              |
+| Shift+Cmd+[      | Previous tab                          |
 | Cmd+Ctrl+Shift+N | Connect to remote nvim                |
 | Cmd+Ctrl+F       | Toggle full screen                    |
 

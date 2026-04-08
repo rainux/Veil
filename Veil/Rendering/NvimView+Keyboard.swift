@@ -5,6 +5,13 @@ import MessagePack
 
 extension NvimView {
     override func performKeyEquivalent(with event: NSEvent) -> Bool {
+        // Ctrl+Tab / Shift+Ctrl+Tab: tab cycling
+        if event.keyCode == 48, event.modifierFlags.contains(.control) {
+            let cmd = event.modifierFlags.contains(.shift) ? "tabprevious" : "tabnext"
+            Task { try? await channel?.command(cmd) }
+            return true
+        }
+
         guard event.modifierFlags.contains(.command),
             let chars = event.charactersIgnoringModifiers
         else {
@@ -14,6 +21,13 @@ extension NvimView {
         // Cmd+1-9: tab switching
         if let digit = chars.first?.wholeNumberValue, digit >= 1 && digit <= 9 {
             let cmd = digit == 9 ? "tablast" : "tabnext \(digit)"
+            Task { try? await channel?.command(cmd) }
+            return true
+        }
+
+        // Shift+Cmd+[ / Shift+Cmd+]: tab cycling
+        if event.modifierFlags.contains(.shift), chars == "{" || chars == "}" {
+            let cmd = chars == "{" ? "tabprevious" : "tabnext"
             Task { try? await channel?.command(cmd) }
             return true
         }
